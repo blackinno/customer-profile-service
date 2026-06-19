@@ -10,7 +10,7 @@
 
 ## 1. Goal
 
-Full feature-parity rewrite of `cx-customer-profile-service` from Go (Fiber + GORM) to Rust (Axum + sqlx). The new service is API-compatible enough to be a drop-in replacement for existing consumers, with freedom to clean up obvious inconsistencies. It will live at `~/Projects/customer-profiles/` (named `customer-profile-service`) and be moved to replace the Go service once complete.
+Full feature-parity rewrite of `cx-customer-profile-service` from Go (Fiber + GORM) to Rust (Axum + sqlx). The new service maintains the same HTTP paths, HTTP methods, `user_uuid` header auth, and JSON field names for all existing fields. The response envelope changes from Go's raw struct to the template's `ApiResponse<T>` (`{ success, data, message }`) — consumers should expect this wrapper. Error message strings may change; error HTTP status codes are preserved exactly. It will live at `~/Projects/customer-profiles/` (named `customer-profile-service`) and be moved to replace the Go service once complete.
 
 ---
 
@@ -27,7 +27,7 @@ customer-profiles/
 ├── Cargo.toml                          # workspace root; binary: customer-profile-service
 ├── cmd/main.rs                         # entrypoint (from template)
 ├── migrations/
-│   └── YYYYMMDD_initial_schema.sql     # single idempotent migration
+│   └── 20260619_initial_schema.sql     # single idempotent migration
 ├── tests/
 │   ├── integration/
 │   │   ├── customers/
