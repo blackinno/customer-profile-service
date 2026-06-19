@@ -1,0 +1,305 @@
+# Customer Profile Service — Rust Rewrite Design
+
+**Date:** 2026-06-19
+**Status:** Approved
+**Source service:** `~/cpn/central-x/services/cx-customer-profile-service` (Go/Fiber)
+**Target location:** `~/Projects/customer-profiles/` (Rust/Axum)
+**Template:** `~/cpn/core/templates/axum-rust-template`
+
+---
+
+## 1. Goal
+
+Full feature-parity rewrite of `cx-customer-profile-service` from Go (Fiber + GORM) to Rust (Axum + sqlx). The new service is API-compatible enough to be a drop-in replacement for existing consumers, with freedom to clean up obvious inconsistencies. It will live at `~/Projects/customer-profiles/` (named `customer-profile-service`) and be moved to replace the Go service once complete.
+
+---
+
+## 2. Approach
+
+**Domain-by-domain.** Implement one domain at a time in dependency order. Each domain completes the full vertical slice — DB structs → domain entities → repository trait → sqlx impl → use-case → handler + route → wired into AppState — before the next domain begins. The per-domain gate is: use-case unit tests at 100% + handler integration tests passing.
+
+---
+
+## 3. Project Structure
+
+```
+customer-profiles/
+├── Cargo.toml                          # workspace root; binary: customer-profile-service
+├── cmd/main.rs                         # entrypoint (from template)
+├── migrations/
+│   └── YYYYMMDD_initial_schema.sql     # single idempotent migration
+├── tests/
+│   ├── integration/
+│   │   ├── customers/
+│   │   ├── identities/
+│   │   ├── profile_changes/
+│   │   ├── profile_images/
+│   │   ├── segments/
+│   │   └── the1/
+│   └── unit_tests/
+│       ├── applications/
+│       └── domain/
+├── crates/
+│   ├── domain/src/
+│   │   ├── entities/         # customer, identity, profile_change, the1, segment
+│   │   ├── repositories/     # async traits per domain
+│   │   └── errors.rs
+│   ├── application/src/
+│   │   ├── use_cases/        # one module per domain
+│   │   └── errors.rs
+│   ├── infrastructure/src/
+│   │   ├── persistence/      # sqlx QueryBuilder implementations per domain
+│   │   ├── external/         # the1_client.rs, sms_client.rs (reqwest)
+│   │   ├── storage/          # s3.rs, cloudfront_signer.rs
+│   │   ├── messaging/        # sns.rs (feature-gated)
+│   │   ├── utils/            # otp.rs, jwt.rs
+│   │   └── configuration/    # Settings struct
+│   └── api/src/
+│       ├── handlers/         # one module per domain
+│       ├── middleware/        # UserUuid extractor
+│       ├── routers.rs
+│       └── docs.rs           # utoipa OpenAPI
+```
+
+---
+
+## 4. Domain Modules & Implementation Order
+
+| # | Domain | DB Tables | External deps introduced |
+|---|--------|-----------|--------------------------|
+| 1 | **customers** | `users`, `user_profiles` | — |
+| 2 | **identities** | `identity_providers` | SNS (`SNS_USER_IDENTITY_LINKED_CHANGED`) |
+| 3 | **profile_changes** | `profile_changes` | SMS proxy, SNS (`SNS_USER_PROFILE_CHANGED`, `SNS_EMAIL_SENT_REQUESTED`) |
+| 4 | **profile_images** | `user_profiles.profile_image` | AWS S3, CloudFront signer |
+| 5 | **segments** | `the1_users` (read) | The1 HTTP client (reqwest) |
+| 6 | **the1** | `the1_users` | SNS (`SNS_USER_THE1_GET_PROFILE_UPDATED`), full The1 client |
+
+### Endpoints
+
+**customers**
+- `POST /v1/customers` — create user
+- `GET /v1/customers` — search (by id / phone / the1_member_id / the1_card_number)
+- `GET /v1/customers/profiles/:id` — get by id (internal)
+- `DELETE /v1/customers/:id` — soft delete
+- `GET /v1/customers/me` — get current customer (requires `user_uuid` header)
+- `PATCH /v1/customers/me` — update current customer
+
+**identities**
+- `GET /v1/customers/me/identities`
+- `POST /v1/customers/me/identities`
+- `DELETE /v1/customers/me/identities/:provider/:identityID`
+- `POST /v1/customers/me/identities/:provider_name/invoke` — token invocation
+- `GET /v1/customers/:userUUID/identities` (internal)
+
+**profile_changes**
+- `POST /v1/customers/me/profile-changes` — initiate OTP flow
+- `PUT /v1/customers/me/profile-changes/:profileID` — update
+- `POST /v1/customers/me/profile-changes/:profileID/verify` — verify OTP
+- `POST /v1/customers/me/profile-changes/:profileID/confirm` — confirm change
+
+**profile_images**
+- `POST /v1/customers/me/profile-images` — upload (multipart/form-data)
+- `GET /v1/customers/me/profile-images` — get signed CloudFront URL
+- `DELETE /v1/customers/me/profile-images`
+
+**segments**
+- `GET /v1/customers/segments` — The1 partner member data
+
+**the1**
+- `GET /v1/customers/the1/account` — The1 account (internal)
+
+**health / observability** (from template, unchanged)
+- `GET /livez`, `GET /readyz`, `GET /healthz`, `GET /metrics`, `GET /swagger`
+
+### Auth Middleware
+
+All `/v1/customers/me/*` routes require a `user_uuid` header validated as UUID. Implemented as an Axum extractor (`UserUuid`). Internal routes (`/v1/customers/:id`, `/v1/customers/profiles/:id`, etc.) do not require the header.
+
+---
+
+## 5. Data Layer
+
+### sqlx with QueryBuilder
+
+All DB queries use `sqlx::QueryBuilder` for dynamic construction. No compile-time `query!` macros, no `.sqlx/` offline snapshots. The `PgPool` is shared across all repositories via `AppFactoryState`.
+
+### Migrations — single idempotent init
+
+All 10 Go migration files are consolidated into one `migrations/YYYYMMDD_initial_schema.sql`. Every statement is safe to run against both a fresh database and one already used by the Go service:
+
+- `CREATE TYPE IF NOT EXISTS` for all enums: `locale_enum`, `gender_enum`, `change_type_enum`, `change_type_status_enum`
+- `CREATE TABLE IF NOT EXISTS` for all 5 tables
+- `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for all columns added in Go migrations 2–10 (token columns, client_id, nationality, card_no, etc.)
+- `CREATE INDEX IF NOT EXISTS` for all indexes
+
+sqlx's `_sqlx_migrations` table ensures the migration only runs once per database.
+
+### DB Schema (final state)
+
+- **users** — id (UUID PK), email, phone, email_verified, phone_verified, locale, has_consent, is_deleted, client_id, created_at, updated_at
+- **user_profiles** — id, user_uuid (FK → users), first_name, last_name, birthdate, gender, profile_image, nationality, created_at, updated_at
+- **identity_providers** — id, user_uuid (FK), provider_name, external_id, provider_id_token, provider_access_token, provider_refresh_token, is_deleted, created_at, updated_at
+- **profile_changes** — id, user_uuid (FK), change_type, identifier, old_value, new_value, status, token, token_expired_at, otp, ref_code, next_otp_request_at, otp_expired_at, created_at, updated_at
+- **the1_users** — id, user_uuid (FK), card_number, member_id, tier_code, tier_expired_at, account_id, profile_id, created_at, updated_at
+
+### Repository Traits
+
+Each domain gets one async trait in `domain/src/repositories/`:
+
+```rust
+// example
+#[async_trait]
+pub trait CustomerRepository: Send + Sync {
+    async fn create(&self, data: CreateCustomer) -> Result<Customer, RepositoryError>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Customer, RepositoryError>;
+    // ...
+}
+```
+
+sqlx `PgPool`-backed implementations live in `infrastructure/src/persistence/`.
+
+---
+
+## 6. External Integrations & Configuration
+
+### Configuration
+
+`Settings` struct in `infrastructure/src/configuration/` loaded from env vars. All existing Go env var names preserved:
+
+| Group | Env vars |
+|-------|----------|
+| Server | `SERVER_HOST`, `SERVER_PORT` |
+| Database | `HOST`, `PORT`, `USER`, `PASSWORD`, `NAME`, `SSL` |
+| AWS | `REGION`, `S3_PROFILE_BUCKET`, `CLOUDFRONT_BASE_ENDPOINT`, `CLOUDFRONT_PRIVATE_KEY`, `CLOUDFRONT_KEY_ID` |
+| SNS | `SNS_USER_PROFILE_CHANGED`, `SNS_EMAIL_SENT_REQUESTED`, `SNS_USER_IDENTITY_LINKED_CHANGED`, `SNS_USER_THE1_GET_PROFILE_UPDATED` |
+| The1 | `THE1_PROXY_SERVICE_URL` |
+| SMS | `SMS_PROXY_SERVICE_URL`, `PHONE_NUMBER_FORMAT`, `OTP_TEXT`, `OTP_EXPIRED_TIME` |
+| Auth/misc | `JWT_SECRET_KEY`, `COUNTRY_CODE`, `PROFILE_CHANGE_EXPIRED_TIME`, `TOKEN_EXPIRED_TIME`, `ALLOW_IMAGE_TYPES`, `MAX_IMAGE_SIZE_MB`, `IMAGE_PREFIX`, `IMAGE_EXPIRED_IN_SEC` |
+
+### External Clients
+
+- `infrastructure/src/external/the1_client.rs` — `reqwest` HTTP client: `get_profile`, `invoke_token`, `get_partner_member`
+- `infrastructure/src/external/sms_client.rs` — `reqwest` HTTP client for OTP SMS dispatch
+
+### Storage
+
+- `infrastructure/src/storage/s3.rs` — `aws-sdk-s3` upload/delete
+- `infrastructure/src/storage/cloudfront_signer.rs` — RSA-signed CloudFront URLs via `rsa` crate (PKCS#1 v1.5, same as Go)
+
+### Messaging
+
+- `infrastructure/src/messaging/sns.rs` — `aws-sdk-sns` publish, feature-gated behind `sns` (already in template)
+
+### Utilities
+
+- `infrastructure/src/utils/otp.rs` — random 6-digit OTP + ref code (`rand`)
+- `infrastructure/src/utils/jwt.rs` — JWT generation/validation (`jsonwebtoken`)
+
+### Additional Cargo Dependencies
+
+```toml
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+aws-sdk-s3 = "1"
+rsa = { version = "0.9", features = ["pkcs1"] }
+jsonwebtoken = "9"
+rand = "0.8"
+```
+
+---
+
+## 7. Error Handling & API Response Shapes
+
+### Error Layers
+
+```
+RepositoryError (domain) → ApplicationError (application) → HTTP response (api)
+```
+
+**`RepositoryError`** (existing in template):
+- `NotFound(String)`, `Conflict(String)`, `Backend(String)`
+
+**`DomainError`** (existing in template):
+- `NotFound(String)`, `InvalidData(String)`, `BusinessRuleViolation(String)`
+
+**`ApplicationError`** (template + additions):
+- `ValidationError` (from `validator::ValidationErrors`) — 422
+- `NotFound(String)` — 404
+- `BadRequest(String)` — 400 (duplicate email/phone, OTP expired, token mismatch, file too large, unsupported media type)
+- `BusinessRuleViolation(String)` — 400
+- `Repository(RepositoryError)` — 409 for Conflict, 404 for NotFound, 500 for Backend
+- `Dispatch(DispatchError)` — 500
+- `External(String)` — 502 (The1 proxy, SMS proxy failures)
+
+### Response Envelope
+
+Template's `ApiResponse<T>` used throughout:
+
+```json
+// success
+{ "success": true, "data": { ... }, "message": null }
+
+// error
+{ "success": false, "data": null, "message": "Not found: user" }
+```
+
+### HTTP Status Mapping
+
+| `ApplicationError` | HTTP status |
+|--------------------|-------------|
+| `NotFound` | 404 |
+| `ValidationError` | 422 |
+| `BadRequest` | 400 |
+| `BusinessRuleViolation` | 400 |
+| `Conflict` (via Repository) | 409 |
+| `External` | 502 |
+| everything else | 500 |
+
+---
+
+## 8. Testing Strategy
+
+### Coverage Targets
+
+| Layer | Target |
+|-------|--------|
+| `application/` (use-cases — business logic) | **100%** |
+| `domain/` | ≥ 80% |
+| `infrastructure/` | ≥ 80% |
+| `api/` | ≥ 80% |
+| **Overall** | **85–100%** |
+
+### Unit Tests (`tests/unit_tests/`)
+
+Use-case logic tested in isolation with hand-written mock repository and external client implementations. Every branch of every use-case covered: happy path, not found, conflict, bad request, external failure. This is how the 100% application-layer target is met.
+
+### Integration Tests (`tests/integration/`)
+
+Full HTTP stack against a real Postgres instance (docker-compose-dev). External services (The1 proxy, SNS, SMS, S3) stubbed with `wiremock`. One controller test module per domain, covering the happy path and primary error branches.
+
+### Per-Domain Gate
+
+Before moving to the next domain:
+1. Use-case unit tests for that domain must reach 100% branch coverage
+2. Handler integration tests must pass
+
+Coverage measured with `cargo-llvm-cov`.
+
+---
+
+## 9. Key Design Decisions Summary
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| HTTP framework | Axum 0.8 | Template standard |
+| DB access | sqlx + QueryBuilder | No ORM magic, flexible dynamic queries |
+| Migrations | Single idempotent init | Compatible with existing Go DB |
+| Error handling | Template's error types + `BadRequest` | Consistency with template patterns |
+| Response shape | Template's `ApiResponse<T>` | Consistency |
+| External HTTP | reqwest 0.12 | Async, JSON-native |
+| CloudFront signing | rsa crate (PKCS#1 v1.5) | Matches Go implementation |
+| OTP | rand crate | Simple, no external deps |
+| JWT | jsonwebtoken crate | Standard Rust JWT |
+| Auth middleware | Axum extractor `UserUuid` | Idiomatic Axum |
+| SNS | aws-sdk-sns (feature-gated) | Template standard |
+| S3 | aws-sdk-s3 | AWS SDK consistency |
+| Coverage tooling | cargo-llvm-cov | Standard Rust coverage tool |
