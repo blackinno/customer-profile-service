@@ -73,6 +73,15 @@ impl AppError {
         }
     }
 
+    pub fn unauthorized(message: impl Into<String>) -> Self {
+        Self {
+            status_code: StatusCode::UNAUTHORIZED,
+            type_url: "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1".to_string(),
+            title: "Unauthorized".to_string(),
+            detail: message.into(),
+        }
+    }
+
     pub fn bad_request(message: impl Into<String>) -> Self {
         Self {
             status_code: StatusCode::BAD_REQUEST,

@@ -1,0 +1,35 @@
+[package]
+name = "infrastructure"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+# `sns` pulls in the AWS SDK (aws-config + aws-sdk-sns), which is by far the
+# heaviest part of the dependency graph. Disable for fast `cargo check` loops
+# on features that don't touch messaging.
+default = ["sns"]
+sns = ["dep:aws-sdk-sns"]
+
+[dependencies]
+domain = { path = "../domain" }
+application = { path = "../application" }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+qml-rs = { workspace = true }
+aws-config = { workspace = true }
+aws-sdk-sns = { workspace = true, optional = true }
+aws-sdk-s3 = { workspace = true }
+reqwest = { workspace = true }
+rsa = { workspace = true }
+sha1 = { workspace = true }
+base64 = { workspace = true }
+jsonwebtoken = { workspace = true }
+rand = { workspace = true }

@@ -131,6 +131,31 @@ impl Settings {
     }
 }
 
+impl From<&Settings> for application::AppConfig {
+    fn from(s: &Settings) -> Self {
+        application::AppConfig {
+            country_code: s.country_code.clone(),
+            phone_number_format: s.phone_number_format.clone(),
+            otp_expired_time: s.otp_expired_time,
+            otp_text: s.otp_text.clone(),
+            jwt_secret_key: s.jwt_secret_key.clone(),
+            profile_change_expired_time: s.profile_change_expired_time,
+            token_expired_time: s.token_expired_time,
+            allow_image_types: s.allow_image_types.clone(),
+            max_image_size_mb: s.max_image_size_mb,
+            image_prefix: s.image_prefix.clone(),
+            image_expired_in_sec: s.image_expired_in_sec,
+            sns_user_profile_changed: s.sns_user_profile_changed.clone(),
+            sns_email_sent_requested: s.sns_email_sent_requested.clone(),
+            sns_user_identity_linked_changed: s.sns_user_identity_linked_changed.clone(),
+            sns_user_the1_get_profile_updated: s.sns_user_the1_get_profile_updated.clone(),
+            s3_profile_bucket: s.s3_profile_bucket.clone(),
+            cloudfront_base_endpoint: s.cloudfront_base_endpoint.clone(),
+            cloudfront_key_id: s.cloudfront_key_id.clone(),
+        }
+    }
+}
+
 fn required_var(name: &str) -> anyhow::Result<String> {
     var(name).map_err(|_| anyhow::anyhow!("environment variable `{}` is required", name))
 }

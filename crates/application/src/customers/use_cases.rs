@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use chrono::NaiveDate;
+use domain::entities::customer::{
+    CreateCustomer, Customer, Gender, Locale, SearchField, UpdateCustomer,
+};
 use domain::repositories::customer_repository::CustomerRepository;
 use uuid::Uuid;
 
@@ -23,22 +27,86 @@ impl CustomerUseCases {
         &self,
         req: CreateCustomerRequest,
     ) -> Result<CustomerResponse, ApplicationError> {
-        todo!("eng-customers: implement create customer use case")
+        // Normalise phone: strip leading "0" and prepend the configured format (e.g. "+66").
+        let phone = req
+            .phone
+            .map(|p| normalize_phone(&p, &self.config.phone_number_format));
+
+        // Uniqueness guards – checked before touching the repo so the error messages
+        // are clean business-rule violations rather than DB constraint errors.
+        if let Some(ref email) = req.email {
+            if self.customers.find_by_email(email).await?.is_some() {
+                return Err(ApplicationError::BadRequest("email already in use".to_string()));
+            }
+        }
+        if let Some(ref p) = phone {
+            if self.customers.find_by_phone(p).await?.is_some() {
+                return Err(ApplicationError::BadRequest("phone already in use".to_string()));
+            }
+        }
+
+        let customer = self
+            .customers
+            .create(CreateCustomer {
+                email: req.email,
+                phone,
+                locale: req.locale.as_deref().map(parse_locale),
+                has_consent: req.has_consent,
+                client_id: req.client_id,
+                first_name: req.first_name,
+                last_name: req.last_name,
+                birthdate: req.birthdate.as_deref().and_then(parse_date),
+                gender: req.gender.as_deref().and_then(parse_gender),
+                nationality: req.nationality,
+            })
+            .await?;
+
+        Ok(customer_to_response(customer))
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> Result<CustomerResponse, ApplicationError> {
-        todo!("eng-customers: implement get_by_id use case")
+        let customer = self
+            .customers
+            .find_by_id(id)
+            .await?
+            .ok_or_else(|| ApplicationError::NotFound(format!("customer {} not found", id)))?;
+
+        if customer.is_deleted {
+            return Err(ApplicationError::NotFound(format!(
+                "customer {} not found",
+                id
+            )));
+        }
+
+        Ok(customer_to_response(customer))
     }
 
     pub async fn search(
         &self,
         query: SearchCustomerQuery,
     ) -> Result<Vec<CustomerResponse>, ApplicationError> {
-        todo!("eng-customers: implement search use case")
+        let field = build_search_field(&query)?;
+        let customers = self.customers.search(field).await?;
+        Ok(customers.into_iter().map(customer_to_response).collect())
     }
 
     pub async fn get_me(&self, user_uuid: Uuid) -> Result<CustomerResponse, ApplicationError> {
-        todo!("eng-customers: implement get_me use case")
+        let customer = self
+            .customers
+            .find_by_id(user_uuid)
+            .await?
+            .ok_or_else(|| {
+                ApplicationError::NotFound(format!("customer {} not found", user_uuid))
+            })?;
+
+        if customer.is_deleted {
+            return Err(ApplicationError::NotFound(format!(
+                "customer {} not found",
+                user_uuid
+            )));
+        }
+
+        Ok(customer_to_response(customer))
     }
 
     pub async fn update_me(
@@ -46,11 +114,43 @@ impl CustomerUseCases {
         user_uuid: Uuid,
         req: UpdateCustomerRequest,
     ) -> Result<CustomerResponse, ApplicationError> {
-        todo!("eng-customers: implement update_me use case")
+        // If the caller is changing their email, ensure the new address is free
+        // (allow re-submitting the same email they already own).
+        if let Some(ref email) = req.email {
+            if let Some(existing) = self.customers.find_by_email(email).await? {
+                if existing.id != user_uuid {
+                    return Err(ApplicationError::BadRequest(
+                        "email already in use".to_string(),
+                    ));
+                }
+            }
+        }
+
+        let customer = self
+            .customers
+            .update(
+                user_uuid,
+                UpdateCustomer {
+                    email: req.email,
+                    // Phone changes go through the profile_change flow, not here.
+                    phone: None,
+                    locale: req.locale.as_deref().map(parse_locale),
+                    has_consent: req.has_consent,
+                    first_name: req.first_name,
+                    last_name: req.last_name,
+                    birthdate: req.birthdate.as_deref().and_then(parse_date),
+                    gender: req.gender.as_deref().and_then(parse_gender),
+                    nationality: req.nationality,
+                },
+            )
+            .await?;
+
+        Ok(customer_to_response(customer))
     }
 
     pub async fn delete(&self, id: Uuid) -> Result<CustomerResponse, ApplicationError> {
-        todo!("eng-customers: implement delete use case")
+        let customer = self.customers.soft_delete(id).await?;
+        Ok(customer_to_response(customer))
     }
 
     pub async fn update_profile_image(
@@ -58,6 +158,117 @@ impl CustomerUseCases {
         user_uuid: Uuid,
         image_key: Option<String>,
     ) -> Result<(), ApplicationError> {
-        todo!("eng-customers: implement update_profile_image")
+        self.customers
+            .update_profile_image(user_uuid, image_key)
+            .await?;
+        Ok(())
+    }
+}
+
+// ---- private helpers ----
+
+/// Strips a leading '0' and prepends the configured country format (e.g. "+66").
+fn normalize_phone(phone: &str, format: &str) -> String {
+    if phone.starts_with('0') {
+        format!("{}{}", format, &phone[1..])
+    } else {
+        phone.to_string()
+    }
+}
+
+fn parse_locale(s: &str) -> Locale {
+    match s.to_lowercase().as_str() {
+        "en" => Locale::En,
+        _ => Locale::Th,
+    }
+}
+
+fn parse_gender(s: &str) -> Option<Gender> {
+    match s.to_lowercase().as_str() {
+        "male" => Some(Gender::Male),
+        "female" => Some(Gender::Female),
+        "other" => Some(Gender::Other),
+        "not_to_say" => Some(Gender::NotToSay),
+        "unspecified" => Some(Gender::Unspecified),
+        _ => None,
+    }
+}
+
+fn parse_date(s: &str) -> Option<NaiveDate> {
+    NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()
+}
+
+/// Maps `SearchCustomerQuery` to a `SearchField`, returning `BadRequest` when no
+/// search parameter is supplied.
+fn build_search_field(query: &SearchCustomerQuery) -> Result<SearchField, ApplicationError> {
+    if let Some(ref id) = query.id {
+        let uuid = Uuid::parse_str(id)
+            .map_err(|_| ApplicationError::BadRequest("invalid id format".to_string()))?;
+        return Ok(SearchField::Id(uuid));
+    }
+    if let Some(ref phone) = query.phone {
+        return Ok(SearchField::Phone(phone.clone()));
+    }
+    if let Some(ref member_id) = query.the1_member_id {
+        return Ok(SearchField::The1MemberId(member_id.clone()));
+    }
+    if let Some(ref card_number) = query.the1_card_number {
+        return Ok(SearchField::The1CardNumber(card_number.clone()));
+    }
+    Err(ApplicationError::BadRequest(
+        "at least one search parameter is required (id, phone, the1_member_id, or the1_card_number)".to_string(),
+    ))
+}
+
+fn locale_to_string(locale: &Locale) -> String {
+    match locale {
+        Locale::Th => "th".to_string(),
+        Locale::En => "en".to_string(),
+    }
+}
+
+fn gender_to_string(gender: &Gender) -> String {
+    match gender {
+        Gender::Male => "male".to_string(),
+        Gender::Female => "female".to_string(),
+        Gender::Other => "other".to_string(),
+        Gender::Unspecified => "unspecified".to_string(),
+        Gender::NotToSay => "not_to_say".to_string(),
+    }
+}
+
+/// Converts a domain `Customer` into the application-layer `CustomerResponse` DTO.
+pub(crate) fn customer_to_response(customer: Customer) -> CustomerResponse {
+    let (first_name, last_name, birthdate, gender, profile_image, nationality) =
+        match customer.profile {
+            Some(profile) => (
+                profile.first_name,
+                profile.last_name,
+                profile.birthdate.map(|d| d.to_string()),
+                profile.gender.as_ref().map(gender_to_string),
+                profile.profile_image,
+                profile.nationality,
+            ),
+            None => (None, None, None, None, None, None),
+        };
+
+    CustomerResponse {
+        id: customer.id.to_string(),
+        email: customer.email,
+        phone: customer.phone,
+        email_verified: customer.email_verified,
+        phone_verified: customer.phone_verified,
+        locale: locale_to_string(&customer.locale),
+        has_consent: customer.has_consent,
+        is_deleted: customer.is_deleted,
+        client_id: customer.client_id,
+        created_at: customer.created_at.to_rfc3339(),
+        updated_at: customer.updated_at.to_rfc3339(),
+        first_name,
+        last_name,
+        birthdate,
+        gender,
+        profile_image,
+        nationality,
     }
 }

@@ -1,0 +1,7 @@
+[toolchain]
+# Edition 2024 needs Rust >= 1.85; resolver "3" needs >= 1.84. Pinning to a
+# recent stable so contributors hit the same compiler the template was tested
+# against. Bump as you upgrade.
+channel = "1.94.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
