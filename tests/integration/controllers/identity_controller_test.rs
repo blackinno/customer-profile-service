@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use api::{handlers::identities, routers::AppState};
+use api::{identities::controller as identities, routers::AppState};
 use application::{
     AppConfig, UseCases,
     customers::use_cases::CustomerUseCases,

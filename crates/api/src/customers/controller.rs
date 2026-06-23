@@ -1,12 +1,3 @@
-use axum::{
-    Json,
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-};
-use std::sync::Arc;
-use uuid::Uuid;
-
 use crate::middleware::error_handler::AppError;
 use crate::middleware::user_uuid::UserUuid;
 use crate::responses::ApiResponse;
@@ -14,8 +5,31 @@ use crate::routers::AppState;
 use application::customers::dtos::{
     CreateCustomerRequest, SearchCustomerQuery, UpdateCustomerRequest,
 };
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+    Router,
+};
+use std::sync::Arc;
+use uuid::Uuid;
 
-/// POST /customers — create a new customer account.
+pub const CUSTOMERS_PATH: &str = "/customers";
+
+pub fn routes(state: Arc<AppState>) -> Router {
+    Router::new()
+        .nest(
+            CUSTOMERS_PATH,
+            Router::new()
+                .route("/", post(create_customer).get(search_customers))
+                .route("/me", get(get_me).put(update_me))
+                .route("/{id}", get(get_customer_by_id).delete(delete_customer)),
+        )
+        .with_state(state)
+}
+
 pub async fn create_customer(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateCustomerRequest>,
@@ -24,7 +38,6 @@ pub async fn create_customer(
     Ok((StatusCode::CREATED, Json(ApiResponse::success(customer))))
 }
 
-/// GET /customers — search customers by one query field.
 pub async fn search_customers(
     State(state): State<Arc<AppState>>,
     Query(query): Query<SearchCustomerQuery>,
@@ -33,7 +46,6 @@ pub async fn search_customers(
     Ok(Json(ApiResponse::success(customers)))
 }
 
-/// GET /customers/me — fetch the currently authenticated customer's own profile.
 pub async fn get_me(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -42,7 +54,6 @@ pub async fn get_me(
     Ok(Json(ApiResponse::success(customer)))
 }
 
-/// PUT /customers/me — update the authenticated customer's own profile.
 pub async fn update_me(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -52,7 +63,6 @@ pub async fn update_me(
     Ok(Json(ApiResponse::success(customer)))
 }
 
-/// GET /customers/{id} — fetch a customer by internal UUID (internal/admin use).
 pub async fn get_customer_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -61,7 +71,6 @@ pub async fn get_customer_by_id(
     Ok(Json(ApiResponse::success(customer)))
 }
 
-/// DELETE /customers/{id} — soft-delete a customer account.
 pub async fn delete_customer(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

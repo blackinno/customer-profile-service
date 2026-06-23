@@ -1,12 +1,3 @@
-use axum::{
-    Json,
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-};
-use std::sync::Arc;
-use uuid::Uuid;
-
 use crate::middleware::error_handler::AppError;
 use crate::middleware::user_uuid::UserUuid;
 use crate::responses::ApiResponse;
@@ -14,8 +5,31 @@ use crate::routers::AppState;
 use application::profile_changes::dtos::{
     CreateProfileChangeRequest, UpdateProfileChangeRequest, VerifyProfileChangeRequest,
 };
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{post, put},
+    Json, Router,
+};
+use std::sync::Arc;
+use uuid::Uuid;
 
-/// POST /v1/customers/me/profile-changes — begin a phone or email change flow.
+pub const PROFILE_CHANGES_PATH: &str = "/customers/me/profile-changes";
+
+pub fn routes(state: Arc<AppState>) -> Router {
+    Router::new()
+        .nest(
+            PROFILE_CHANGES_PATH,
+            Router::new()
+                .route("/", post(create_profile_change))
+                .route("/{profile_id}", put(update_profile_change))
+                .route("/{profile_id}/verify", post(verify_profile_change))
+                .route("/{profile_id}/confirm", post(confirm_profile_change)),
+        )
+        .with_state(state)
+}
+
 pub async fn create_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -29,7 +43,6 @@ pub async fn create_profile_change(
     Ok((StatusCode::CREATED, Json(ApiResponse::success(record))))
 }
 
-/// PUT /v1/customers/me/profile-changes/{profile_id} — resend OTP.
 pub async fn update_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -44,7 +57,6 @@ pub async fn update_profile_change(
     Ok(Json(ApiResponse::success(record)))
 }
 
-/// POST /v1/customers/me/profile-changes/{profile_id}/verify — verify OTP.
 pub async fn verify_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -59,7 +71,6 @@ pub async fn verify_profile_change(
     Ok(Json(ApiResponse::success(record)))
 }
 
-/// POST /v1/customers/me/profile-changes/{profile_id}/confirm — finalise the change.
 pub async fn confirm_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,

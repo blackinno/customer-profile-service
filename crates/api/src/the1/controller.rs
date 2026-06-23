@@ -1,26 +1,32 @@
-use std::sync::Arc;
-
-use axum::{
-    Json,
-    extract::{Query, State},
-    response::IntoResponse,
-};
-use serde::Deserialize;
-use uuid::Uuid;
-
 use crate::middleware::error_handler::AppError;
 use crate::responses::ApiResponse;
 use crate::routers::AppState;
+use axum::{
+    extract::{Query, State},
+    response::IntoResponse,
+    routing::get,
+    Json, Router,
+};
+use serde::Deserialize;
+use std::sync::Arc;
+use uuid::Uuid;
+
+pub const THE1_BASE_PATH: &str = "/customers/the1";
 
 #[derive(Deserialize)]
 pub struct The1AccountQuery {
     pub user_uuid: Uuid,
 }
 
-/// `GET /v1/customers/the1/account?user_uuid=<uuid>`
-///
-/// Internal endpoint (no user-auth header required). Returns the The1 account
-/// linked to the given platform user UUID.
+pub fn routes(state: Arc<AppState>) -> Router {
+    Router::new()
+        .nest(
+            THE1_BASE_PATH,
+            Router::new().route("/account", get(get_the1_account)),
+        )
+        .with_state(state)
+}
+
 pub async fn get_the1_account(
     State(state): State<Arc<AppState>>,
     Query(q): Query<The1AccountQuery>,

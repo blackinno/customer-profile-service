@@ -1,21 +1,41 @@
+use crate::middleware::error_handler::AppError;
+use crate::middleware::user_uuid::UserUuid;
+use crate::responses::ApiResponse;
+use crate::routers::AppState;
+use application::identities::dtos::CreateIdentityRequest;
 use axum::{
-    Json,
     extract::{Path, State},
     response::IntoResponse,
+    routing::{delete, get, post},
+    Json, Router,
 };
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{
-    middleware::{error_handler::AppError, user_uuid::UserUuid},
-    responses::ApiResponse,
-    routers::AppState,
-};
-use application::identities::dtos::CreateIdentityRequest;
+pub const IDENTITIES_BASE_PATH: &str = "/customers";
 
-/// `GET /v1/customers/me/identities`
-///
-/// Return all active provider identities linked to the authenticated user.
+pub fn routes(state: Arc<AppState>) -> Router {
+    Router::new()
+        .nest(
+            IDENTITIES_BASE_PATH,
+            Router::new()
+                .route(
+                    "/me/identities",
+                    get(get_my_identities).post(create_identity),
+                )
+                .route(
+                    "/me/identities/{provider}/{external_id}",
+                    delete(delete_identity),
+                )
+                .route(
+                    "/me/identities/{provider_name}/invoke",
+                    post(invoke_token),
+                )
+                .route("/{user_uuid}/identities", get(get_identities_internal)),
+        )
+        .with_state(state)
+}
+
 pub async fn get_my_identities(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -24,10 +44,6 @@ pub async fn get_my_identities(
     Ok(Json(ApiResponse::success(identities)))
 }
 
-/// `GET /v1/customers/:user_uuid/identities`
-///
-/// Internal/admin route — returns identities for any user without requiring
-/// the `X-User-UUID` header (auth is handled upstream by the API gateway).
 pub async fn get_identities_internal(
     State(state): State<Arc<AppState>>,
     Path(user_uuid): Path<Uuid>,
@@ -40,10 +56,6 @@ pub async fn get_identities_internal(
     Ok(Json(ApiResponse::success(identities)))
 }
 
-/// `POST /v1/customers/me/identities`
-///
-/// Link a new provider identity to the authenticated user.  Returns the
-/// created (or restored) identity.
 pub async fn create_identity(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -57,10 +69,6 @@ pub async fn create_identity(
     Ok(Json(ApiResponse::success(identity)))
 }
 
-/// `DELETE /v1/customers/me/identities/:provider/:external_id`
-///
-/// Soft-delete the specified provider identity that belongs to the
-/// authenticated user and record the action in the audit log.
 pub async fn delete_identity(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -74,10 +82,6 @@ pub async fn delete_identity(
     Ok(Json(ApiResponse::success(())))
 }
 
-/// `POST /v1/customers/me/identities/:provider_name/invoke`
-///
-/// Return the stored provider tokens for the given identity.  The live
-/// The1 token-refresh call is wired in Task 24.
 pub async fn invoke_token(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,

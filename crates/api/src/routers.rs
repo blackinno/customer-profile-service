@@ -1,14 +1,10 @@
 use crate::docs::{ApiDoc, TAG_HEALTH};
-use crate::handlers::{customers, identities, profile_changes, profile_images, segments, the1};
 use crate::middleware::{apply_observability_layers, metrics_router};
+use crate::{customers, identities, profile_changes, profile_images, segments, the1};
 use application::UseCases;
 use axum::http::StatusCode;
 use axum::response::Json;
-use axum::{
-    Router,
-    extract::State,
-    routing::{delete, get, post, put},
-};
+use axum::{Router, extract::State, routing::get};
 use infrastructure::AppFactoryState;
 use metrics_exporter_prometheus::PrometheusHandle;
 use sqlx::PgPool;
@@ -56,69 +52,12 @@ impl Routers {
 
         // ---- Domain routers ----
         let v1 = Router::new()
-            // Customers
-            .route("/customers", post(customers::create_customer))
-            .route("/customers", get(customers::search_customers))
-            .route("/customers/me", get(customers::get_me))
-            .route("/customers/me", put(customers::update_me))
-            .route("/customers/{id}", get(customers::get_customer_by_id))
-            .route("/customers/{id}", delete(customers::delete_customer))
-            // Identities
-            .route(
-                "/customers/me/identities",
-                get(identities::get_my_identities),
-            )
-            .route(
-                "/customers/me/identities",
-                post(identities::create_identity),
-            )
-            .route(
-                "/customers/me/identities/{provider}/{external_id}",
-                delete(identities::delete_identity),
-            )
-            .route(
-                "/customers/me/identities/{provider_name}/invoke",
-                post(identities::invoke_token),
-            )
-            .route(
-                "/customers/{user_uuid}/identities",
-                get(identities::get_identities_internal),
-            )
-            // Profile changes
-            .route(
-                "/customers/me/profile-changes",
-                post(profile_changes::create_profile_change),
-            )
-            .route(
-                "/customers/me/profile-changes/{profile_id}",
-                put(profile_changes::update_profile_change),
-            )
-            .route(
-                "/customers/me/profile-changes/{profile_id}/verify",
-                post(profile_changes::verify_profile_change),
-            )
-            .route(
-                "/customers/me/profile-changes/{profile_id}/confirm",
-                post(profile_changes::confirm_profile_change),
-            )
-            // Profile images
-            .route(
-                "/customers/me/profile-images",
-                post(profile_images::upload_profile_image),
-            )
-            .route(
-                "/customers/me/profile-images",
-                get(profile_images::get_profile_image),
-            )
-            .route(
-                "/customers/me/profile-images",
-                delete(profile_images::delete_profile_image),
-            )
-            // Segments
-            .route("/customers/segments", get(segments::get_segment))
-            // The1
-            .route("/customers/the1/account", get(the1::get_the1_account))
-            .with_state(state.clone());
+            .merge(customers::routes(state.clone()))
+            .merge(identities::routes(state.clone()))
+            .merge(profile_changes::routes(state.clone()))
+            .merge(profile_images::routes(state.clone()))
+            .merge(segments::routes(state.clone()))
+            .merge(the1::routes(state));
 
         let app = Router::new()
             .merge(swagger_router)

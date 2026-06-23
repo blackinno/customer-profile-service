@@ -1,5 +1,10 @@
+pub mod customers;
 pub mod docs;
-pub mod handlers;
+pub mod identities;
 pub mod middleware;
+pub mod profile_changes;
+pub mod profile_images;
 pub mod responses;
 pub mod routers;
+pub mod segments;
+pub mod the1;

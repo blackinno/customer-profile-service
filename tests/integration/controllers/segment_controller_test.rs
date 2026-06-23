@@ -17,7 +17,7 @@ use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use api::{handlers::segments::get_segment, routers::AppState};
+use api::{segments::controller::get_segment, routers::AppState};
 use application::{
     AppConfig, UseCases,
     customers::use_cases::CustomerUseCases,

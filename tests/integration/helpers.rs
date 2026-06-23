@@ -12,7 +12,7 @@ use chrono::Utc;
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use api::{handlers::customers::*, routers::AppState};
+use api::{customers::controller::*, routers::AppState};
 use application::{
     AppConfig, UseCases,
     customers::use_cases::CustomerUseCases,
