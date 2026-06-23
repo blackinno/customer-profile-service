@@ -138,23 +138,44 @@ impl AppFactoryState {
                 settings.image_expired_in_sec,
             )?);
 
+        // ---- SNS publisher ----
+        #[cfg(feature = "sns")]
+        let publisher: Arc<dyn application::events::Publisher> = {
+            let sns = Arc::new(crate::AwsSns::new(factory.client.clone()));
+            Arc::new(crate::SnsPublisher::new(sns))
+        };
+        #[cfg(not(feature = "sns"))]
+        let publisher: Arc<dyn application::events::Publisher> =
+            Arc::new(application::events::NoopPublisher);
+
         // ---- Use cases ----
-        let customer_uc = Arc::new(CustomerUseCases::new(customers.clone(), config.clone()));
-        let identity_uc = Arc::new(IdentityUseCases::new(identities));
-        let profile_change_uc = Arc::new(ProfileChangeUseCases::new(
-            profile_changes,
-            customers.clone(),
-            config.clone(),
-            sms,
-            token_service,
-        ));
+        let customer_uc = Arc::new(
+            CustomerUseCases::new(customers.clone(), config.clone())
+                .with_publisher(publisher.clone()),
+        );
+        let identity_uc = Arc::new(
+            IdentityUseCases::new(identities).with_publisher(publisher.clone(), &config),
+        );
+        let profile_change_uc = Arc::new(
+            ProfileChangeUseCases::new(
+                profile_changes,
+                customers.clone(),
+                config.clone(),
+                sms,
+                token_service,
+            )
+            .with_publisher(publisher.clone()),
+        );
         let profile_image_uc = Arc::new(ProfileImageUseCases::new(
             customers,
-            config,
+            config.clone(),
             storage_backend,
             signer,
         ));
-        let segment_uc = Arc::new(SegmentUseCases::new(the1_users.clone(), the1_client));
+        let segment_uc = Arc::new(
+            SegmentUseCases::new(the1_users.clone(), the1_client)
+                .with_publisher(publisher.clone(), &config),
+        );
         let the1_uc = Arc::new(The1UseCases::new(the1_users));
 
         let use_cases = UseCases {

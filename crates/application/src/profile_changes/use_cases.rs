@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::config::AppConfig;
 use crate::errors::ApplicationError;
+use crate::events::{EmailSentRequestedPayload, NoopPublisher, ProfileChangedPayload, Publisher};
 use crate::profile_changes::dtos::{
     CreateProfileChangeRequest, ProfileChangeResponse, UpdateProfileChangeRequest,
     VerifyProfileChangeRequest,
@@ -42,6 +43,7 @@ pub struct ProfileChangeUseCases {
     config: Arc<AppConfig>,
     sms: Arc<dyn SmsService>,
     token_service: Arc<dyn TokenService>,
+    publisher: Arc<dyn Publisher>,
 }
 
 impl ProfileChangeUseCases {
@@ -58,7 +60,13 @@ impl ProfileChangeUseCases {
             config,
             sms,
             token_service,
+            publisher: Arc::new(NoopPublisher),
         }
+    }
+
+    pub fn with_publisher(mut self, publisher: Arc<dyn Publisher>) -> Self {
+        self.publisher = publisher;
+        self
     }
 
     /// Begin a phone-number or email-change flow. Sends an OTP and returns the pending record.
@@ -124,14 +132,28 @@ impl ProfileChangeUseCases {
             })
             .await?;
 
-        // Send OTP via SMS for phone changes; email-change OTPs sent via SNS
-        // (not yet wired — omit silently for now).
         if change_type == ChangeType::Telephone {
             let message = self.config.otp_text.replace("{otp}", &otp);
             self.sms
                 .send(&new_value, &message)
                 .await
                 .map_err(ApplicationError::External)?;
+        } else if change_type == ChangeType::Email {
+            let payload = serde_json::to_string(&EmailSentRequestedPayload {
+                user_uuid: user_uuid.to_string(),
+                email: new_value.clone(),
+                otp: otp.clone(),
+                ref_code: ref_code.clone(),
+                otp_expired_at: otp_expired_at.to_rfc3339(),
+            })
+            .unwrap_or_default();
+            if let Err(e) = self
+                .publisher
+                .publish(&self.config.sns_email_sent_requested, &payload)
+                .await
+            {
+                tracing::warn!("sns publish failed (email sent requested): {e}");
+            }
         }
 
         Ok(profile_change_to_response(record))
@@ -322,6 +344,18 @@ impl ProfileChangeUseCases {
             },
         };
         self.customers.update(user_uuid, update).await?;
+
+        let payload = serde_json::to_string(&ProfileChangedPayload {
+            user_uuid: user_uuid.to_string(),
+        })
+        .unwrap_or_default();
+        if let Err(e) = self
+            .publisher
+            .publish(&self.config.sns_user_profile_changed, &payload)
+            .await
+        {
+            tracing::warn!("sns publish failed (profile changed via confirm): {e}");
+        }
 
         let completed = self
             .profile_changes

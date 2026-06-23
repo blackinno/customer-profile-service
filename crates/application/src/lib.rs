@@ -1,5 +1,6 @@
 pub mod config;
 pub mod customers;
+pub mod events;
 pub mod errors;
 pub mod identities;
 pub mod profile_changes;

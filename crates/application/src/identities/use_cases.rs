@@ -4,16 +4,30 @@ use domain::entities::identity::CreateIdentity;
 use domain::repositories::identity_repository::IdentityRepository;
 use uuid::Uuid;
 
+use crate::config::AppConfig;
 use crate::errors::ApplicationError;
+use crate::events::{IdentityLinkedChangedPayload, NoopPublisher, Publisher};
 use crate::identities::dtos::{CreateIdentityRequest, IdentityResponse, InvokeTokenResponse};
 
 pub struct IdentityUseCases {
     identities: Arc<dyn IdentityRepository>,
+    publisher: Arc<dyn Publisher>,
+    sns_topic: String,
 }
 
 impl IdentityUseCases {
     pub fn new(identities: Arc<dyn IdentityRepository>) -> Self {
-        Self { identities }
+        Self {
+            identities,
+            publisher: Arc::new(NoopPublisher),
+            sns_topic: String::new(),
+        }
+    }
+
+    pub fn with_publisher(mut self, publisher: Arc<dyn Publisher>, config: &AppConfig) -> Self {
+        self.publisher = publisher;
+        self.sns_topic = config.sns_user_identity_linked_changed.clone();
+        self
     }
 
     /// Map a domain `Identity` into the API-facing `IdentityResponse` DTO.
@@ -98,11 +112,29 @@ impl IdentityUseCases {
                 .identities
                 .restore(deleted.id, user_uuid, tokens)
                 .await?;
+            let payload = serde_json::to_string(&IdentityLinkedChangedPayload {
+                user_uuid: user_uuid.to_string(),
+                provider_name: req.provider_name.clone(),
+                action: "linked".to_string(),
+            })
+            .unwrap_or_default();
+            if let Err(e) = self.publisher.publish(&self.sns_topic, &payload).await {
+                tracing::warn!("sns publish failed (identity linked): {e}");
+            }
             return Ok(Self::to_response(restored));
         }
 
         // No recyclable row — create fresh
         let created = self.identities.create(tokens).await?;
+        let payload = serde_json::to_string(&IdentityLinkedChangedPayload {
+            user_uuid: user_uuid.to_string(),
+            provider_name: req.provider_name.clone(),
+            action: "linked".to_string(),
+        })
+        .unwrap_or_default();
+        if let Err(e) = self.publisher.publish(&self.sns_topic, &payload).await {
+            tracing::warn!("sns publish failed (identity linked): {e}");
+        }
         Ok(Self::to_response(created))
     }
 
@@ -124,6 +156,16 @@ impl IdentityUseCases {
         self.identities
             .log_transaction(user_uuid, "delete", &provider, &external_id)
             .await?;
+
+        let payload = serde_json::to_string(&IdentityLinkedChangedPayload {
+            user_uuid: user_uuid.to_string(),
+            provider_name: provider.clone(),
+            action: "unlinked".to_string(),
+        })
+        .unwrap_or_default();
+        if let Err(e) = self.publisher.publish(&self.sns_topic, &payload).await {
+            tracing::warn!("sns publish failed (identity unlinked): {e}");
+        }
 
         Ok(())
     }

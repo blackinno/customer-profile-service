@@ -12,15 +12,27 @@ use crate::customers::dtos::{
     CreateCustomerRequest, CustomerResponse, SearchCustomerQuery, UpdateCustomerRequest,
 };
 use crate::errors::ApplicationError;
+use crate::events::{NoopPublisher, ProfileChangedPayload, Publisher};
 
 pub struct CustomerUseCases {
     customers: Arc<dyn CustomerRepository>,
     config: Arc<AppConfig>,
+    publisher: Arc<dyn Publisher>,
 }
 
 impl CustomerUseCases {
     pub fn new(customers: Arc<dyn CustomerRepository>, config: Arc<AppConfig>) -> Self {
-        Self { customers, config }
+        Self {
+            customers,
+            config,
+            publisher: Arc::new(NoopPublisher),
+        }
+    }
+
+    /// Override publisher for production (called by infrastructure factory).
+    pub fn with_publisher(mut self, publisher: Arc<dyn Publisher>) -> Self {
+        self.publisher = publisher;
+        self
     }
 
     pub async fn create(
@@ -143,6 +155,19 @@ impl CustomerUseCases {
                 },
             )
             .await?;
+
+        // Publish profile-changed event (best-effort: log on failure, don't abort)
+        let payload = serde_json::to_string(&ProfileChangedPayload {
+            user_uuid: user_uuid.to_string(),
+        })
+        .unwrap_or_default();
+        if let Err(e) = self
+            .publisher
+            .publish(&self.config.sns_user_profile_changed, &payload)
+            .await
+        {
+            tracing::warn!("sns publish failed (profile changed): {e}");
+        }
 
         Ok(customer_to_response(customer))
     }
