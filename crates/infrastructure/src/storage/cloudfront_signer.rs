@@ -1,6 +1,6 @@
 use application::profile_images::use_cases::UrlSigner;
 use base64::{Engine, engine::general_purpose::STANDARD};
-use rsa::{Pkcs1v15Sign, RsaPrivateKey, pkcs1::DecodeRsaPrivateKey};
+use rsa::{Pkcs1v15Sign, RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, pkcs8::DecodePrivateKey};
 use sha1::{Digest, Sha1};
 
 /// CloudFront canned-policy signed-URL generator.
@@ -29,7 +29,9 @@ impl CloudFrontSigner {
         base_url: String,
         expires_in_secs: u32,
     ) -> anyhow::Result<Self> {
-        let private_key = RsaPrivateKey::from_pkcs1_pem(pem)?;
+        // Accept both PKCS#8 ("BEGIN PRIVATE KEY") and PKCS#1 ("BEGIN RSA PRIVATE KEY").
+        let private_key = RsaPrivateKey::from_pkcs8_pem(pem)
+            .or_else(|_| RsaPrivateKey::from_pkcs1_pem(pem))?;
         Ok(Self {
             private_key,
             key_id,
