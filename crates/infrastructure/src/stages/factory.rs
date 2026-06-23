@@ -4,8 +4,7 @@ use crate::{
     configuration::{Settings, create_connection_pool, create_qml_connection_pool, migration},
     external::{sms_client::SmsClient, the1_client::The1HttpClient},
     persistence::{
-        pg_customer_repository::PgCustomerRepository,
-        pg_identity_repository::PgIdentityRepository,
+        pg_customer_repository::PgCustomerRepository, pg_identity_repository::PgIdentityRepository,
         pg_profile_change_repository::PgProfileChangeRepository,
         pg_the1_user_repository::PgThe1UserRepository,
     },
@@ -13,18 +12,14 @@ use crate::{
     utils::jwt::JwtTokenService,
 };
 use application::{
-    AppConfig,
-    Repositories, UseCases,
-    customers::use_cases::CustomerUseCases,
-    identities::use_cases::IdentityUseCases,
-    profile_changes::use_cases::ProfileChangeUseCases,
-    profile_images::use_cases::ProfileImageUseCases,
-    segments::use_cases::SegmentUseCases,
+    AppConfig, Repositories, UseCases, customers::use_cases::CustomerUseCases,
+    identities::use_cases::IdentityUseCases, profile_changes::use_cases::ProfileChangeUseCases,
+    profile_images::use_cases::ProfileImageUseCases, segments::use_cases::SegmentUseCases,
     the1::use_cases::The1UseCases,
 };
+use aws_config::{BehaviorVersion, Region};
 #[cfg(feature = "sns")]
 use aws_sdk_sns::Client;
-use aws_config::{BehaviorVersion, Region};
 use qml_rs::Storage;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -81,9 +76,7 @@ impl AppFactoryState {
         // Synchronous wiring is fine — all heavy async work (DB pool, migrations,
         // QML storage, AWS clients) was already done in `InitialAppFactory::new`.
         // `AppFactoryState::new` is only called once, at startup.
-        panic!(
-            "AppFactoryState::new requires async context — call AppFactoryState::build instead"
-        )
+        panic!("AppFactoryState::new requires async context — call AppFactoryState::build instead")
     }
 
     /// Wire all repositories, external clients, and use-case structs.
@@ -103,9 +96,8 @@ impl AppFactoryState {
         let profile_changes: Arc<
             dyn domain::repositories::profile_change_repository::ProfileChangeRepository,
         > = Arc::new(PgProfileChangeRepository::new(pool.clone()));
-        let the1_users: Arc<
-            dyn domain::repositories::the1_user_repository::The1UserRepository,
-        > = Arc::new(PgThe1UserRepository::new(pool.clone()));
+        let the1_users: Arc<dyn domain::repositories::the1_user_repository::The1UserRepository> =
+            Arc::new(PgThe1UserRepository::new(pool.clone()));
 
         let repos = Repositories {
             customers: customers.clone(),
@@ -148,7 +140,7 @@ impl AppFactoryState {
 
         // ---- Use cases ----
         let customer_uc = Arc::new(CustomerUseCases::new(customers.clone(), config.clone()));
-        let identity_uc = Arc::new(IdentityUseCases::new(identities, customers.clone()));
+        let identity_uc = Arc::new(IdentityUseCases::new(identities));
         let profile_change_uc = Arc::new(ProfileChangeUseCases::new(
             profile_changes,
             customers.clone(),

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use domain::entities::identity::CreateIdentity;
-use domain::repositories::customer_repository::CustomerRepository;
 use domain::repositories::identity_repository::IdentityRepository;
 use uuid::Uuid;
 
@@ -10,15 +9,11 @@ use crate::identities::dtos::{CreateIdentityRequest, IdentityResponse, InvokeTok
 
 pub struct IdentityUseCases {
     identities: Arc<dyn IdentityRepository>,
-    customers: Arc<dyn CustomerRepository>,
 }
 
 impl IdentityUseCases {
-    pub fn new(
-        identities: Arc<dyn IdentityRepository>,
-        customers: Arc<dyn CustomerRepository>,
-    ) -> Self {
-        Self { identities, customers }
+    pub fn new(identities: Arc<dyn IdentityRepository>) -> Self {
+        Self { identities }
     }
 
     /// Map a domain `Identity` into the API-facing `IdentityResponse` DTO.

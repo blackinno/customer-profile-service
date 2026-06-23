@@ -36,8 +36,7 @@ use domain::{
     },
     errors::RepositoryError,
     repositories::{
-        customer_repository::CustomerRepository,
-        identity_repository::IdentityRepository,
+        customer_repository::CustomerRepository, identity_repository::IdentityRepository,
         profile_change_repository::ProfileChangeRepository,
         the1_user_repository::The1UserRepository,
     },
@@ -92,7 +91,9 @@ fn make_identity(user: Uuid, provider: &str, ext: &str) -> Identity {
 struct NoOpSmsService;
 #[async_trait]
 impl SmsService for NoOpSmsService {
-    async fn send(&self, _: &str, _: &str) -> Result<(), String> { Ok(()) }
+    async fn send(&self, _: &str, _: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 struct NoOpTokenService;
@@ -108,13 +109,19 @@ impl TokenService for NoOpTokenService {
 struct NoOpImageStorage;
 #[async_trait]
 impl ImageStorage for NoOpImageStorage {
-    async fn upload(&self, key: &str, _: Vec<u8>, _: &str) -> Result<String, String> { Ok(key.to_string()) }
-    async fn delete(&self, _: &str) -> Result<(), String> { Ok(()) }
+    async fn upload(&self, key: &str, _: Vec<u8>, _: &str) -> Result<String, String> {
+        Ok(key.to_string())
+    }
+    async fn delete(&self, _: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 struct NoOpUrlSigner;
 impl UrlSigner for NoOpUrlSigner {
-    fn sign_url(&self, key: &str) -> Result<String, String> { Ok(format!("https://cdn/{key}")) }
+    fn sign_url(&self, key: &str) -> Result<String, String> {
+        Ok(format!("https://cdn/{key}"))
+    }
 }
 
 struct NoOpThe1Client;
@@ -132,33 +139,88 @@ impl The1Client for NoOpThe1Client {
 struct NoOpCustomerRepo;
 #[async_trait]
 impl CustomerRepository for NoOpCustomerRepo {
-    async fn create(&self, _: CreateCustomer) -> Result<Customer, RepositoryError> { unimplemented!() }
-    async fn find_by_id(&self, _: Uuid) -> Result<Option<Customer>, RepositoryError> { unimplemented!() }
-    async fn find_by_phone(&self, _: &str) -> Result<Option<Customer>, RepositoryError> { unimplemented!() }
-    async fn find_by_email(&self, _: &str) -> Result<Option<Customer>, RepositoryError> { unimplemented!() }
-    async fn search(&self, _: SearchField) -> Result<Vec<Customer>, RepositoryError> { unimplemented!() }
-    async fn update(&self, _: Uuid, _: UpdateCustomer) -> Result<Customer, RepositoryError> { unimplemented!() }
-    async fn soft_delete(&self, _: Uuid) -> Result<Customer, RepositoryError> { unimplemented!() }
-    async fn update_profile_image(&self, _: Uuid, _: Option<String>) -> Result<(), RepositoryError> { unimplemented!() }
+    async fn create(&self, _: CreateCustomer) -> Result<Customer, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_id(&self, _: Uuid) -> Result<Option<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_phone(&self, _: &str) -> Result<Option<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_email(&self, _: &str) -> Result<Option<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn search(&self, _: SearchField) -> Result<Vec<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update(&self, _: Uuid, _: UpdateCustomer) -> Result<Customer, RepositoryError> {
+        unimplemented!()
+    }
+    async fn soft_delete(&self, _: Uuid) -> Result<Customer, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_profile_image(
+        &self,
+        _: Uuid,
+        _: Option<String>,
+    ) -> Result<(), RepositoryError> {
+        unimplemented!()
+    }
 }
 
 struct NoOpProfileChangeRepo;
 #[async_trait]
 impl ProfileChangeRepository for NoOpProfileChangeRepo {
-    async fn create(&self, _: CreateProfileChange) -> Result<ProfileChange, RepositoryError> { unimplemented!() }
-    async fn find_by_id(&self, _: Uuid) -> Result<Option<ProfileChange>, RepositoryError> { unimplemented!() }
-    async fn find_active_by_user_and_type(&self, _: Uuid, _: ChangeType) -> Result<Option<ProfileChange>, RepositoryError> { unimplemented!() }
-    async fn update_otp(&self, _: Uuid, _: String, _: String, _: chrono::DateTime<Utc>, _: chrono::DateTime<Utc>) -> Result<ProfileChange, RepositoryError> { unimplemented!() }
-    async fn update_status_and_token(&self, _: Uuid, _: ChangeStatus, _: Option<String>, _: Option<chrono::DateTime<Utc>>) -> Result<ProfileChange, RepositoryError> { unimplemented!() }
+    async fn create(&self, _: CreateProfileChange) -> Result<ProfileChange, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_id(&self, _: Uuid) -> Result<Option<ProfileChange>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_active_by_user_and_type(
+        &self,
+        _: Uuid,
+        _: ChangeType,
+    ) -> Result<Option<ProfileChange>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_otp(
+        &self,
+        _: Uuid,
+        _: String,
+        _: String,
+        _: chrono::DateTime<Utc>,
+        _: chrono::DateTime<Utc>,
+    ) -> Result<ProfileChange, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_status_and_token(
+        &self,
+        _: Uuid,
+        _: ChangeStatus,
+        _: Option<String>,
+        _: Option<chrono::DateTime<Utc>>,
+    ) -> Result<ProfileChange, RepositoryError> {
+        unimplemented!()
+    }
 }
 
 struct NoOpThe1UserRepo;
 #[async_trait]
 impl The1UserRepository for NoOpThe1UserRepo {
-    async fn find_by_user(&self, _: Uuid) -> Result<Option<The1User>, RepositoryError> { unimplemented!() }
-    async fn find_by_card_number(&self, _: &str) -> Result<Option<The1User>, RepositoryError> { unimplemented!() }
-    async fn find_by_member_id(&self, _: &str) -> Result<Option<The1User>, RepositoryError> { unimplemented!() }
-    async fn upsert(&self, _: Uuid, _: UpsertThe1User) -> Result<The1User, RepositoryError> { unimplemented!() }
+    async fn find_by_user(&self, _: Uuid) -> Result<Option<The1User>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_card_number(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_member_id(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn upsert(&self, _: Uuid, _: UpsertThe1User) -> Result<The1User, RepositoryError> {
+        unimplemented!()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -171,26 +233,55 @@ struct MockIdentityRepo {
 
 impl MockIdentityRepo {
     fn new(items: Vec<Identity>) -> Arc<Self> {
-        Arc::new(Self { store: Mutex::new(items) })
+        Arc::new(Self {
+            store: Mutex::new(items),
+        })
     }
 }
 
 #[async_trait]
 impl IdentityRepository for MockIdentityRepo {
     async fn find_by_user(&self, user_uuid: Uuid) -> Result<Vec<Identity>, RepositoryError> {
-        Ok(self.store.lock().unwrap().iter()
+        Ok(self
+            .store
+            .lock()
+            .unwrap()
+            .iter()
             .filter(|i| i.user_uuid == user_uuid && !i.is_deleted)
-            .cloned().collect())
+            .cloned()
+            .collect())
     }
 
-    async fn find_active(&self, user_uuid: Uuid, provider: &str, external_id: &str) -> Result<Option<Identity>, RepositoryError> {
-        Ok(self.store.lock().unwrap().iter()
-            .find(|i| i.user_uuid == user_uuid && i.provider_name == provider && i.external_id == external_id && !i.is_deleted)
+    async fn find_active(
+        &self,
+        user_uuid: Uuid,
+        provider: &str,
+        external_id: &str,
+    ) -> Result<Option<Identity>, RepositoryError> {
+        Ok(self
+            .store
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|i| {
+                i.user_uuid == user_uuid
+                    && i.provider_name == provider
+                    && i.external_id == external_id
+                    && !i.is_deleted
+            })
             .cloned())
     }
 
-    async fn find_deleted(&self, provider: &str, external_id: &str) -> Result<Option<Identity>, RepositoryError> {
-        Ok(self.store.lock().unwrap().iter()
+    async fn find_deleted(
+        &self,
+        provider: &str,
+        external_id: &str,
+    ) -> Result<Option<Identity>, RepositoryError> {
+        Ok(self
+            .store
+            .lock()
+            .unwrap()
+            .iter()
             .find(|i| i.provider_name == provider && i.external_id == external_id && i.is_deleted)
             .cloned())
     }
@@ -212,9 +303,16 @@ impl IdentityRepository for MockIdentityRepo {
         Ok(identity)
     }
 
-    async fn restore(&self, id: Uuid, user_uuid: Uuid, tokens: CreateIdentity) -> Result<Identity, RepositoryError> {
+    async fn restore(
+        &self,
+        id: Uuid,
+        user_uuid: Uuid,
+        tokens: CreateIdentity,
+    ) -> Result<Identity, RepositoryError> {
         let mut store = self.store.lock().unwrap();
-        let entry = store.iter_mut().find(|i| i.id == id)
+        let entry = store
+            .iter_mut()
+            .find(|i| i.id == id)
             .ok_or_else(|| RepositoryError::NotFound("not found".into()))?;
         entry.user_uuid = user_uuid;
         entry.is_deleted = false;
@@ -226,22 +324,37 @@ impl IdentityRepository for MockIdentityRepo {
 
     async fn soft_delete(&self, id: Uuid, user_uuid: Uuid) -> Result<Identity, RepositoryError> {
         let mut store = self.store.lock().unwrap();
-        let entry = store.iter_mut().find(|i| i.id == id && i.user_uuid == user_uuid)
+        let entry = store
+            .iter_mut()
+            .find(|i| i.id == id && i.user_uuid == user_uuid)
             .ok_or_else(|| RepositoryError::NotFound("not found".into()))?;
         entry.is_deleted = true;
         Ok(entry.clone())
     }
 
-    async fn update_tokens(&self, id: Uuid, access_token: Option<String>, refresh_token: Option<String>) -> Result<Identity, RepositoryError> {
+    async fn update_tokens(
+        &self,
+        id: Uuid,
+        access_token: Option<String>,
+        refresh_token: Option<String>,
+    ) -> Result<Identity, RepositoryError> {
         let mut store = self.store.lock().unwrap();
-        let entry = store.iter_mut().find(|i| i.id == id)
+        let entry = store
+            .iter_mut()
+            .find(|i| i.id == id)
             .ok_or_else(|| RepositoryError::NotFound("not found".into()))?;
         entry.provider_access_token = access_token;
         entry.provider_refresh_token = refresh_token;
         Ok(entry.clone())
     }
 
-    async fn log_transaction(&self, _: Uuid, _: &str, _: &str, _: &str) -> Result<(), RepositoryError> {
+    async fn log_transaction(
+        &self,
+        _: Uuid,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<(), RepositoryError> {
         Ok(())
     }
 }
@@ -253,13 +366,13 @@ impl IdentityRepository for MockIdentityRepo {
 fn build_router(identity_repo: Arc<MockIdentityRepo>) -> Router {
     let cfg = test_config();
 
-    let identity_uc = IdentityUseCases::new(
-        identity_repo,
-        Arc::new(NoOpCustomerRepo),
-    );
+    let identity_uc = IdentityUseCases::new(identity_repo);
 
     let use_cases = UseCases {
-        customers: Arc::new(CustomerUseCases::new(Arc::new(NoOpCustomerRepo), cfg.clone())),
+        customers: Arc::new(CustomerUseCases::new(
+            Arc::new(NoOpCustomerRepo),
+            cfg.clone(),
+        )),
         identities: Arc::new(identity_uc),
         profile_changes: Arc::new(ProfileChangeUseCases::new(
             Arc::new(NoOpProfileChangeRepo),
@@ -323,7 +436,9 @@ async fn get_my_identities_returns_200_with_list() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["success"], true);
     assert_eq!(json["data"].as_array().unwrap().len(), 1);
@@ -346,7 +461,9 @@ async fn get_my_identities_returns_empty_list_for_new_user() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["data"].as_array().unwrap().len(), 0);
 }
@@ -381,7 +498,9 @@ async fn get_identities_internal_returns_200_without_auth_header() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["data"].as_array().unwrap().len(), 1);
     assert_eq!(json["data"][0]["external_id"], "the1-ext");
@@ -412,7 +531,9 @@ async fn create_identity_returns_200_on_new_link() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(json["success"], true);
     assert_eq!(json["data"]["provider_name"], "google");
@@ -534,7 +655,9 @@ async fn invoke_token_returns_200_with_stored_tokens() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(json["success"], true);
     assert_eq!(json["data"]["access_token"], "acc");

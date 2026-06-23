@@ -32,12 +32,11 @@ use domain::{
         customer::{CreateCustomer, Customer, SearchField, UpdateCustomer},
         identity::{CreateIdentity, Identity},
         profile_change::{ChangeStatus, ChangeType, CreateProfileChange, ProfileChange},
-        the1_user::{The1User, Tier, UpsertTier, UpsertThe1User},
+        the1_user::{The1User, Tier, UpsertThe1User, UpsertTier},
     },
     errors::RepositoryError,
     repositories::{
-        customer_repository::CustomerRepository,
-        identity_repository::IdentityRepository,
+        customer_repository::CustomerRepository, identity_repository::IdentityRepository,
         profile_change_repository::ProfileChangeRepository,
         the1_user_repository::The1UserRepository,
     },
@@ -50,7 +49,9 @@ use domain::{
 struct NoOpSmsService;
 #[async_trait]
 impl SmsService for NoOpSmsService {
-    async fn send(&self, _phone: &str, _message: &str) -> Result<(), String> { Ok(()) }
+    async fn send(&self, _phone: &str, _message: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 struct NoOpTokenService;
@@ -60,9 +61,13 @@ impl TokenService for NoOpTokenService {
     }
     fn validate(&self, token: &str) -> Result<(Uuid, Uuid), String> {
         let mut parts = token.splitn(2, ':');
-        let id = parts.next().and_then(|s| Uuid::parse_str(s).ok())
+        let id = parts
+            .next()
+            .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| "bad token".to_string())?;
-        let user = parts.next().and_then(|s| Uuid::parse_str(s).ok())
+        let user = parts
+            .next()
+            .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| "bad token".to_string())?;
         Ok((id, user))
     }
@@ -74,7 +79,9 @@ impl ImageStorage for NoOpImageStorage {
     async fn upload(&self, key: &str, _data: Vec<u8>, _ct: &str) -> Result<String, String> {
         Ok(key.to_string())
     }
-    async fn delete(&self, _key: &str) -> Result<(), String> { Ok(()) }
+    async fn delete(&self, _key: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 struct NoOpUrlSigner;
@@ -87,37 +94,121 @@ impl UrlSigner for NoOpUrlSigner {
 struct NoOpCustomerRepo;
 #[async_trait]
 impl CustomerRepository for NoOpCustomerRepo {
-    async fn create(&self, _: CreateCustomer) -> Result<Customer, RepositoryError> { unimplemented!() }
-    async fn find_by_id(&self, _: Uuid) -> Result<Option<Customer>, RepositoryError> { unimplemented!() }
-    async fn find_by_phone(&self, _: &str) -> Result<Option<Customer>, RepositoryError> { unimplemented!() }
-    async fn find_by_email(&self, _: &str) -> Result<Option<Customer>, RepositoryError> { unimplemented!() }
-    async fn search(&self, _: SearchField) -> Result<Vec<Customer>, RepositoryError> { unimplemented!() }
-    async fn update(&self, _: Uuid, _: UpdateCustomer) -> Result<Customer, RepositoryError> { unimplemented!() }
-    async fn soft_delete(&self, _: Uuid) -> Result<Customer, RepositoryError> { unimplemented!() }
-    async fn update_profile_image(&self, _: Uuid, _: Option<String>) -> Result<(), RepositoryError> { unimplemented!() }
+    async fn create(&self, _: CreateCustomer) -> Result<Customer, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_id(&self, _: Uuid) -> Result<Option<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_phone(&self, _: &str) -> Result<Option<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_email(&self, _: &str) -> Result<Option<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn search(&self, _: SearchField) -> Result<Vec<Customer>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update(&self, _: Uuid, _: UpdateCustomer) -> Result<Customer, RepositoryError> {
+        unimplemented!()
+    }
+    async fn soft_delete(&self, _: Uuid) -> Result<Customer, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_profile_image(
+        &self,
+        _: Uuid,
+        _: Option<String>,
+    ) -> Result<(), RepositoryError> {
+        unimplemented!()
+    }
 }
 
 struct NoOpIdentityRepo;
 #[async_trait]
 impl IdentityRepository for NoOpIdentityRepo {
-    async fn find_by_user(&self, _: Uuid) -> Result<Vec<Identity>, RepositoryError> { unimplemented!() }
-    async fn find_active(&self, _: Uuid, _: &str, _: &str) -> Result<Option<Identity>, RepositoryError> { unimplemented!() }
-    async fn find_deleted(&self, _: &str, _: &str) -> Result<Option<Identity>, RepositoryError> { unimplemented!() }
-    async fn create(&self, _: CreateIdentity) -> Result<Identity, RepositoryError> { unimplemented!() }
-    async fn restore(&self, _: Uuid, _: Uuid, _: CreateIdentity) -> Result<Identity, RepositoryError> { unimplemented!() }
-    async fn soft_delete(&self, _: Uuid, _: Uuid) -> Result<Identity, RepositoryError> { unimplemented!() }
-    async fn update_tokens(&self, _: Uuid, _: Option<String>, _: Option<String>) -> Result<Identity, RepositoryError> { unimplemented!() }
-    async fn log_transaction(&self, _: Uuid, _: &str, _: &str, _: &str) -> Result<(), RepositoryError> { unimplemented!() }
+    async fn find_by_user(&self, _: Uuid) -> Result<Vec<Identity>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_active(
+        &self,
+        _: Uuid,
+        _: &str,
+        _: &str,
+    ) -> Result<Option<Identity>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_deleted(&self, _: &str, _: &str) -> Result<Option<Identity>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn create(&self, _: CreateIdentity) -> Result<Identity, RepositoryError> {
+        unimplemented!()
+    }
+    async fn restore(
+        &self,
+        _: Uuid,
+        _: Uuid,
+        _: CreateIdentity,
+    ) -> Result<Identity, RepositoryError> {
+        unimplemented!()
+    }
+    async fn soft_delete(&self, _: Uuid, _: Uuid) -> Result<Identity, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_tokens(
+        &self,
+        _: Uuid,
+        _: Option<String>,
+        _: Option<String>,
+    ) -> Result<Identity, RepositoryError> {
+        unimplemented!()
+    }
+    async fn log_transaction(
+        &self,
+        _: Uuid,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<(), RepositoryError> {
+        unimplemented!()
+    }
 }
 
 struct NoOpProfileChangeRepo;
 #[async_trait]
 impl ProfileChangeRepository for NoOpProfileChangeRepo {
-    async fn create(&self, _: CreateProfileChange) -> Result<ProfileChange, RepositoryError> { unimplemented!() }
-    async fn find_by_id(&self, _: Uuid) -> Result<Option<ProfileChange>, RepositoryError> { unimplemented!() }
-    async fn find_active_by_user_and_type(&self, _: Uuid, _: ChangeType) -> Result<Option<ProfileChange>, RepositoryError> { unimplemented!() }
-    async fn update_otp(&self, _: Uuid, _: String, _: String, _: chrono::DateTime<Utc>, _: chrono::DateTime<Utc>) -> Result<ProfileChange, RepositoryError> { unimplemented!() }
-    async fn update_status_and_token(&self, _: Uuid, _: ChangeStatus, _: Option<String>, _: Option<chrono::DateTime<Utc>>) -> Result<ProfileChange, RepositoryError> { unimplemented!() }
+    async fn create(&self, _: CreateProfileChange) -> Result<ProfileChange, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_id(&self, _: Uuid) -> Result<Option<ProfileChange>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_active_by_user_and_type(
+        &self,
+        _: Uuid,
+        _: ChangeType,
+    ) -> Result<Option<ProfileChange>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_otp(
+        &self,
+        _: Uuid,
+        _: String,
+        _: String,
+        _: chrono::DateTime<Utc>,
+        _: chrono::DateTime<Utc>,
+    ) -> Result<ProfileChange, RepositoryError> {
+        unimplemented!()
+    }
+    async fn update_status_and_token(
+        &self,
+        _: Uuid,
+        _: ChangeStatus,
+        _: Option<String>,
+        _: Option<chrono::DateTime<Utc>>,
+    ) -> Result<ProfileChange, RepositoryError> {
+        unimplemented!()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -130,11 +221,21 @@ struct MockThe1UserRepo {
 
 #[async_trait]
 impl The1UserRepository for MockThe1UserRepo {
-    async fn find_by_user(&self, _: Uuid) -> Result<Option<The1User>, RepositoryError> { unimplemented!() }
-    async fn find_by_card_number(&self, _: &str) -> Result<Option<The1User>, RepositoryError> { unimplemented!() }
-    async fn find_by_member_id(&self, _: &str) -> Result<Option<The1User>, RepositoryError> { unimplemented!() }
+    async fn find_by_user(&self, _: Uuid) -> Result<Option<The1User>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_card_number(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
+        unimplemented!()
+    }
+    async fn find_by_member_id(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
+        unimplemented!()
+    }
 
-    async fn upsert(&self, user_uuid: Uuid, _: UpsertThe1User) -> Result<The1User, RepositoryError> {
+    async fn upsert(
+        &self,
+        user_uuid: Uuid,
+        _: UpsertThe1User,
+    ) -> Result<The1User, RepositoryError> {
         match &self.upsert_user {
             Some(t) => Ok(The1User {
                 id: t.id,
@@ -238,10 +339,7 @@ fn build_router(
 
     let use_cases = UseCases {
         customers: Arc::new(CustomerUseCases::new(noop_customers.clone(), cfg.clone())),
-        identities: Arc::new(IdentityUseCases::new(
-            Arc::new(NoOpIdentityRepo),
-            noop_customers.clone(),
-        )),
+        identities: Arc::new(IdentityUseCases::new(Arc::new(NoOpIdentityRepo))),
         profile_changes: Arc::new(ProfileChangeUseCases::new(
             Arc::new(NoOpProfileChangeRepo),
             noop_customers.clone(),
@@ -283,9 +381,14 @@ async fn get_segment_returns_200_with_segment_slug() {
         upsert_user: Some(make_the1_user(user_uuid, tiers)),
     });
     let the1_client = Arc::new(MockThe1Client {
-        partner_data: Some(make_partner_data(user_uuid, vec![
-            UpsertTier { code: "GOLD".to_string(), name: None, expired_date: None },
-        ])),
+        partner_data: Some(make_partner_data(
+            user_uuid,
+            vec![UpsertTier {
+                code: "GOLD".to_string(),
+                name: None,
+                expired_date: None,
+            }],
+        )),
     });
 
     let app = build_router(the1_users, the1_client);
@@ -298,7 +401,9 @@ async fn get_segment_returns_200_with_segment_slug() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["success"], true);
     assert_eq!(json["data"]["segment_slug"], "GOLD");

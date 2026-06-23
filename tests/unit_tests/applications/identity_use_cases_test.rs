@@ -5,10 +5,8 @@ use uuid::Uuid;
 
 use application::errors::ApplicationError;
 use application::identities::use_cases::IdentityUseCases;
-use domain::entities::customer::{CreateCustomer, Customer, SearchField, UpdateCustomer};
 use domain::entities::identity::{CreateIdentity, Identity};
 use domain::errors::RepositoryError;
-use domain::repositories::customer_repository::CustomerRepository;
 use domain::repositories::identity_repository::IdentityRepository;
 
 // ---------------------------------------------------------------------------
@@ -190,47 +188,8 @@ impl IdentityRepository for MockIdentityRepo {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Mock CustomerRepository (no-op — IdentityUseCases holds the dep but the
-// identity use-case methods tested here do not invoke it)
-// ---------------------------------------------------------------------------
-
-struct MockCustomerRepo;
-
-#[async_trait]
-impl CustomerRepository for MockCustomerRepo {
-    async fn create(&self, _: CreateCustomer) -> Result<Customer, RepositoryError> {
-        unimplemented!()
-    }
-    async fn find_by_id(&self, _: Uuid) -> Result<Option<Customer>, RepositoryError> {
-        unimplemented!()
-    }
-    async fn find_by_phone(&self, _: &str) -> Result<Option<Customer>, RepositoryError> {
-        unimplemented!()
-    }
-    async fn find_by_email(&self, _: &str) -> Result<Option<Customer>, RepositoryError> {
-        unimplemented!()
-    }
-    async fn search(&self, _: SearchField) -> Result<Vec<Customer>, RepositoryError> {
-        unimplemented!()
-    }
-    async fn update(&self, _: Uuid, _: UpdateCustomer) -> Result<Customer, RepositoryError> {
-        unimplemented!()
-    }
-    async fn soft_delete(&self, _: Uuid) -> Result<Customer, RepositoryError> {
-        unimplemented!()
-    }
-    async fn update_profile_image(
-        &self,
-        _: Uuid,
-        _: Option<String>,
-    ) -> Result<(), RepositoryError> {
-        unimplemented!()
-    }
-}
-
 fn build_use_cases(repo: Arc<MockIdentityRepo>) -> IdentityUseCases {
-    IdentityUseCases::new(repo, Arc::new(MockCustomerRepo))
+    IdentityUseCases::new(repo)
 }
 
 // ---------------------------------------------------------------------------
@@ -264,7 +223,12 @@ async fn get_identities_returns_empty_for_user_with_no_identities() {
 async fn get_identities_does_not_return_other_users_identities() {
     let user_a = Uuid::new_v4();
     let user_b = Uuid::new_v4();
-    let repo = MockIdentityRepo::new(vec![make_identity(Uuid::new_v4(), user_b, "google", "ext-1")]);
+    let repo = MockIdentityRepo::new(vec![make_identity(
+        Uuid::new_v4(),
+        user_b,
+        "google",
+        "ext-1",
+    )]);
     let uc = build_use_cases(repo);
 
     let result = uc.get_identities(user_a).await.unwrap();
@@ -336,7 +300,9 @@ async fn create_identity_returns_bad_request_when_already_linked() {
 async fn create_identity_restores_deleted_identity_for_same_user() {
     let user = Uuid::new_v4();
     let old_id = Uuid::new_v4();
-    let repo = MockIdentityRepo::new(vec![make_deleted_identity(old_id, user, "google", "ext-del")]);
+    let repo = MockIdentityRepo::new(vec![make_deleted_identity(
+        old_id, user, "google", "ext-del",
+    )]);
     let uc = build_use_cases(repo);
 
     let req = application::identities::dtos::CreateIdentityRequest {
@@ -455,10 +421,7 @@ async fn invoke_token_returns_not_found_when_provider_absent() {
     let uc = build_use_cases(repo);
 
     // User has a google identity but not a 'the1' identity
-    let err = uc
-        .invoke_token(user, "the1".to_string())
-        .await
-        .unwrap_err();
+    let err = uc.invoke_token(user, "the1".to_string()).await.unwrap_err();
 
     assert!(
         matches!(err, ApplicationError::NotFound(_)),

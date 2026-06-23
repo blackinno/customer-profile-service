@@ -33,8 +33,7 @@ use domain::{
     },
     errors::RepositoryError,
     repositories::{
-        customer_repository::CustomerRepository,
-        identity_repository::IdentityRepository,
+        customer_repository::CustomerRepository, identity_repository::IdentityRepository,
         profile_change_repository::ProfileChangeRepository,
         the1_user_repository::The1UserRepository,
     },
@@ -138,16 +137,34 @@ impl CustomerRepository for InMemoryCustomerRepository {
             .get_mut(&id)
             .ok_or_else(|| RepositoryError::NotFound(format!("customer {} not found", id)))?;
 
-        if let Some(v) = data.email { customer.email = Some(v); }
-        if let Some(v) = data.phone { customer.phone = Some(v); }
-        if let Some(v) = data.locale { customer.locale = v; }
-        if let Some(v) = data.has_consent { customer.has_consent = v; }
+        if let Some(v) = data.email {
+            customer.email = Some(v);
+        }
+        if let Some(v) = data.phone {
+            customer.phone = Some(v);
+        }
+        if let Some(v) = data.locale {
+            customer.locale = v;
+        }
+        if let Some(v) = data.has_consent {
+            customer.has_consent = v;
+        }
         if let Some(profile) = customer.profile.as_mut() {
-            if let Some(v) = data.first_name { profile.first_name = Some(v); }
-            if let Some(v) = data.last_name { profile.last_name = Some(v); }
-            if let Some(v) = data.birthdate { profile.birthdate = Some(v); }
-            if let Some(v) = data.gender { profile.gender = Some(v); }
-            if let Some(v) = data.nationality { profile.nationality = Some(v); }
+            if let Some(v) = data.first_name {
+                profile.first_name = Some(v);
+            }
+            if let Some(v) = data.last_name {
+                profile.last_name = Some(v);
+            }
+            if let Some(v) = data.birthdate {
+                profile.birthdate = Some(v);
+            }
+            if let Some(v) = data.gender {
+                profile.gender = Some(v);
+            }
+            if let Some(v) = data.nationality {
+                profile.nationality = Some(v);
+            }
         }
         customer.updated_at = Utc::now();
         Ok(customer.clone())
@@ -158,8 +175,14 @@ impl CustomerRepository for InMemoryCustomerRepository {
         let customer = store
             .get_mut(&id)
             .ok_or_else(|| RepositoryError::NotFound(format!("customer {} not found", id)))?;
-        let new_phone = customer.phone.as_ref().map(|p| format!("{}-deleted-{}", p, id));
-        let new_email = customer.email.as_ref().map(|e| format!("{}-deleted-{}", e, id));
+        let new_phone = customer
+            .phone
+            .as_ref()
+            .map(|p| format!("{}-deleted-{}", p, id));
+        let new_email = customer
+            .email
+            .as_ref()
+            .map(|e| format!("{}-deleted-{}", e, id));
         customer.is_deleted = true;
         customer.phone = new_phone;
         customer.email = new_email;
@@ -194,7 +217,12 @@ impl IdentityRepository for StubIdentityRepository {
     async fn find_by_user(&self, _: Uuid) -> Result<Vec<Identity>, RepositoryError> {
         unreachable!("not called in customer integration tests")
     }
-    async fn find_active(&self, _: Uuid, _: &str, _: &str) -> Result<Option<Identity>, RepositoryError> {
+    async fn find_active(
+        &self,
+        _: Uuid,
+        _: &str,
+        _: &str,
+    ) -> Result<Option<Identity>, RepositoryError> {
         unreachable!()
     }
     async fn find_deleted(&self, _: &str, _: &str) -> Result<Option<Identity>, RepositoryError> {
@@ -203,16 +231,32 @@ impl IdentityRepository for StubIdentityRepository {
     async fn create(&self, _: CreateIdentity) -> Result<Identity, RepositoryError> {
         unreachable!()
     }
-    async fn restore(&self, _: Uuid, _: Uuid, _: CreateIdentity) -> Result<Identity, RepositoryError> {
+    async fn restore(
+        &self,
+        _: Uuid,
+        _: Uuid,
+        _: CreateIdentity,
+    ) -> Result<Identity, RepositoryError> {
         unreachable!()
     }
     async fn soft_delete(&self, _: Uuid, _: Uuid) -> Result<Identity, RepositoryError> {
         unreachable!()
     }
-    async fn update_tokens(&self, _: Uuid, _: Option<String>, _: Option<String>) -> Result<Identity, RepositoryError> {
+    async fn update_tokens(
+        &self,
+        _: Uuid,
+        _: Option<String>,
+        _: Option<String>,
+    ) -> Result<Identity, RepositoryError> {
         unreachable!()
     }
-    async fn log_transaction(&self, _: Uuid, _: &str, _: &str, _: &str) -> Result<(), RepositoryError> {
+    async fn log_transaction(
+        &self,
+        _: Uuid,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<(), RepositoryError> {
         unreachable!()
     }
 }
@@ -227,7 +271,11 @@ impl ProfileChangeRepository for StubProfileChangeRepository {
     async fn find_by_id(&self, _: Uuid) -> Result<Option<ProfileChange>, RepositoryError> {
         unreachable!()
     }
-    async fn find_active_by_user_and_type(&self, _: Uuid, _: ChangeType) -> Result<Option<ProfileChange>, RepositoryError> {
+    async fn find_active_by_user_and_type(
+        &self,
+        _: Uuid,
+        _: ChangeType,
+    ) -> Result<Option<ProfileChange>, RepositoryError> {
         unreachable!()
     }
     async fn update_otp(
@@ -290,9 +338,13 @@ impl TokenService for StubTokenService {
     }
     fn validate(&self, token: &str) -> Result<(Uuid, Uuid), String> {
         let mut parts = token.splitn(2, ':');
-        let id = parts.next().and_then(|s| Uuid::parse_str(s).ok())
+        let id = parts
+            .next()
+            .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| "bad token".to_string())?;
-        let user = parts.next().and_then(|s| Uuid::parse_str(s).ok())
+        let user = parts
+            .next()
+            .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| "bad token".to_string())?;
         Ok((id, user))
     }
@@ -322,7 +374,10 @@ struct StubThe1Client;
 
 #[async_trait]
 impl The1Client for StubThe1Client {
-    async fn get_partner_member(&self, _card_number: &str) -> Result<The1PartnerMemberData, String> {
+    async fn get_partner_member(
+        &self,
+        _card_number: &str,
+    ) -> Result<The1PartnerMemberData, String> {
         Err("stub — not used in customer integration tests".to_string())
     }
 }
@@ -362,10 +417,7 @@ pub fn create_test_app(customers: Arc<InMemoryCustomerRepository>) -> Router {
 
     let use_cases = UseCases {
         customers: Arc::new(CustomerUseCases::new(customers_dyn.clone(), config.clone())),
-        identities: Arc::new(IdentityUseCases::new(
-            Arc::new(StubIdentityRepository),
-            customers_dyn.clone(),
-        )),
+        identities: Arc::new(IdentityUseCases::new(Arc::new(StubIdentityRepository))),
         profile_changes: Arc::new(ProfileChangeUseCases::new(
             Arc::new(StubProfileChangeRepository),
             customers_dyn.clone(),
