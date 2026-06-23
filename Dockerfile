@@ -32,11 +32,8 @@ RUN cargo build --release
 FROM alpine:3.20
 WORKDIR /usr/src/app
 RUN apk add --no-cache openssl ca-certificates
-COPY --from=builder /usr/src/app/target/release/axum-rust-template .
-
-# Migrations are embedded into the binary via `sqlx::migrate!`, so no
-# `migrations/` copy is needed at runtime.
+COPY --from=builder /usr/src/app/target/release/customer-profile-service .
 
 EXPOSE 8000
 
-CMD ["./axum-rust-template"]
+CMD ["./customer-profile-service"]

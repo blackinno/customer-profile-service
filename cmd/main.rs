@@ -16,6 +16,11 @@ async fn main() -> anyhow::Result<()> {
 
     let factory = InitialAppFactory::new(settings.clone()).await?;
     let app_stage = AppFactoryState::build(factory).await?;
+
+    sqlx::migrate!("./migrations")
+        .run(&app_stage.pool)
+        .await?;
+    tracing::info!("Database migrations applied");
     tracing::info!("Application state initialized");
 
     // Start QML workers. The server holds its own internal task handles —
