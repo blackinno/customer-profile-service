@@ -18,10 +18,6 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 # Stage 2: builder — cook deps from the recipe (cached layer), then build app.
 FROM chef AS builder
-# SQLx compile-time query checks read from `.sqlx/` instead of a live DB.
-# Run `cargo sqlx prepare --workspace` against a real DB whenever queries
-# change, then commit the updated `.sqlx/` directory.
-ENV SQLX_OFFLINE=true
 COPY --from=planner /usr/src/app/recipe.json recipe.json
 # This layer is cached as long as Cargo.toml/Cargo.lock don't change.
 RUN cargo chef cook --release --recipe-path recipe.json
