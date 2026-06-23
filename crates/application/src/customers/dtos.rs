@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateCustomerRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
@@ -15,7 +16,7 @@ pub struct CreateCustomerRequest {
     pub nationality: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateCustomerRequest {
     pub email: Option<String>,
     pub locale: Option<String>,
@@ -27,7 +28,7 @@ pub struct UpdateCustomerRequest {
     pub nationality: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CustomerResponse {
     pub id: String,
     pub email: Option<String>,
@@ -48,7 +49,7 @@ pub struct CustomerResponse {
     pub nationality: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct SearchCustomerQuery {
     pub id: Option<String>,
     pub phone: Option<String>,

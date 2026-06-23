@@ -3,7 +3,7 @@ use crate::middleware::user_uuid::UserUuid;
 use crate::responses::ApiResponse;
 use crate::routers::AppState;
 use application::customers::dtos::{
-    CreateCustomerRequest, SearchCustomerQuery, UpdateCustomerRequest,
+    CreateCustomerRequest, CustomerResponse, SearchCustomerQuery, UpdateCustomerRequest,
 };
 use axum::{
     Json,
@@ -30,6 +30,17 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers",
+    request_body = CreateCustomerRequest,
+    responses(
+        (status = 201, description = "Created", body = inline(crate::responses::ApiResponse<CustomerResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 422, description = "Validation error"),
+    ),
+    tag = "Customers",
+)]
 pub async fn create_customer(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateCustomerRequest>,
@@ -38,6 +49,16 @@ pub async fn create_customer(
     Ok((StatusCode::CREATED, Json(ApiResponse::success(customer))))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/customers",
+    params(SearchCustomerQuery),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<Vec<CustomerResponse>>)),
+        (status = 400, description = "Bad request"),
+    ),
+    tag = "Customers",
+)]
 pub async fn search_customers(
     State(state): State<Arc<AppState>>,
     Query(query): Query<SearchCustomerQuery>,
@@ -46,6 +67,19 @@ pub async fn search_customers(
     Ok(Json(ApiResponse::success(customers)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/customers/me",
+    params(
+        ("x-user-uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<CustomerResponse>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "Customers",
+)]
 pub async fn get_me(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -54,6 +88,21 @@ pub async fn get_me(
     Ok(Json(ApiResponse::success(customer)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/v1/customers/me",
+    params(
+        ("x-user-uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    request_body = UpdateCustomerRequest,
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<CustomerResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 401, description = "Unauthorized"),
+        (status = 422, description = "Validation error"),
+    ),
+    tag = "Customers",
+)]
 pub async fn update_me(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -63,6 +112,18 @@ pub async fn update_me(
     Ok(Json(ApiResponse::success(customer)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/customers/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Customer UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<CustomerResponse>)),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "Customers",
+)]
 pub async fn get_customer_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -71,6 +132,18 @@ pub async fn get_customer_by_id(
     Ok(Json(ApiResponse::success(customer)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/v1/customers/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Customer UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<CustomerResponse>)),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "Customers",
+)]
 pub async fn delete_customer(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

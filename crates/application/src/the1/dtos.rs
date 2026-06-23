@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TierResponse {
     pub id: String,
     pub code: String,
@@ -10,7 +11,7 @@ pub struct TierResponse {
     pub expired_date: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct The1AccountResponse {
     pub id: String,
     pub user_uuid: Uuid,

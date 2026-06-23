@@ -27,6 +27,20 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers/me/profile-images",
+    request_body(content = inline(String), content_type = "multipart/form-data", description = "Profile image file (field: 'file')"),
+    params(
+        ("user_uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 201, description = "Image uploaded", body = inline(crate::responses::ApiResponse<application::profile_images::dtos::ProfileImageResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 413, description = "File too large"),
+    ),
+    tag = "ProfileImages",
+)]
 pub async fn upload_profile_image(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -60,6 +74,18 @@ pub async fn upload_profile_image(
     Ok((StatusCode::CREATED, Json(ApiResponse::success(response))))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/customers/me/profile-images",
+    params(
+        ("user_uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<application::profile_images::dtos::ProfileImageResponse>)),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "ProfileImages",
+)]
 pub async fn get_profile_image(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -68,6 +94,18 @@ pub async fn get_profile_image(
     Ok((StatusCode::OK, Json(ApiResponse::success(response))))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/v1/customers/me/profile-images",
+    params(
+        ("user_uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "ProfileImages",
+)]
 pub async fn delete_profile_image(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,

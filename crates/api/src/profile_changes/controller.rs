@@ -3,7 +3,8 @@ use crate::middleware::user_uuid::UserUuid;
 use crate::responses::ApiResponse;
 use crate::routers::AppState;
 use application::profile_changes::dtos::{
-    CreateProfileChangeRequest, UpdateProfileChangeRequest, VerifyProfileChangeRequest,
+    CreateProfileChangeRequest, ProfileChangeResponse, UpdateProfileChangeRequest,
+    VerifyProfileChangeRequest,
 };
 use axum::{
     extract::{Path, State},
@@ -30,6 +31,20 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers/me/profile-changes",
+    request_body = CreateProfileChangeRequest,
+    params(
+        ("x-user-uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 201, description = "Created", body = inline(crate::responses::ApiResponse<ProfileChangeResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    tag = "ProfileChanges",
+)]
 pub async fn create_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -43,6 +58,22 @@ pub async fn create_profile_change(
     Ok((StatusCode::CREATED, Json(ApiResponse::success(record))))
 }
 
+#[utoipa::path(
+    put,
+    path = "/v1/customers/me/profile-changes/{profile_id}",
+    request_body = UpdateProfileChangeRequest,
+    params(
+        ("profile_id" = Uuid, Path, description = "Profile change request ID"),
+        ("x-user-uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<ProfileChangeResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "ProfileChanges",
+)]
 pub async fn update_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -57,6 +88,22 @@ pub async fn update_profile_change(
     Ok(Json(ApiResponse::success(record)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers/me/profile-changes/{profile_id}/verify",
+    request_body = VerifyProfileChangeRequest,
+    params(
+        ("profile_id" = Uuid, Path, description = "Profile change request ID"),
+        ("x-user-uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<ProfileChangeResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "ProfileChanges",
+)]
 pub async fn verify_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -71,6 +118,20 @@ pub async fn verify_profile_change(
     Ok(Json(ApiResponse::success(record)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers/me/profile-changes/{profile_id}/confirm",
+    params(
+        ("profile_id" = Uuid, Path, description = "Profile change request ID"),
+        ("x-user-uuid" = String, Header, description = "Authenticated user UUID"),
+    ),
+    responses(
+        (status = 200, description = "OK", body = inline(crate::responses::ApiResponse<ProfileChangeResponse>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "ProfileChanges",
+)]
 pub async fn confirm_profile_change(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,

@@ -31,3 +31,16 @@ pub const TAG_HEALTH: &str = "Health";
     )
 )]
 pub struct ApiDoc;
+
+impl ApiDoc {
+    pub fn merged() -> utoipa::openapi::OpenApi {
+        let mut doc = <Self as OpenApi>::openapi();
+        doc.merge(crate::customers::DomainDoc::openapi());
+        doc.merge(crate::identities::DomainDoc::openapi());
+        doc.merge(crate::profile_changes::DomainDoc::openapi());
+        doc.merge(crate::profile_images::DomainDoc::openapi());
+        doc.merge(crate::segments::DomainDoc::openapi());
+        doc.merge(crate::the1::DomainDoc::openapi());
+        doc
+    }
+}

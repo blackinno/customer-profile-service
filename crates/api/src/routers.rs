@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::timeout::TimeoutLayer;
-use utoipa::{OpenApi, ToSchema};
+use utoipa::ToSchema;
 use utoipa_swagger_ui::SwaggerUi;
 
 /// Maximum request body size (1 MiB). Override per-route if larger payloads
@@ -36,7 +36,7 @@ impl Routers {
             .with_state(app_state.pool.clone());
 
         let swagger_router =
-            SwaggerUi::new("/swagger").url("/swagger/openapi.json", ApiDoc::openapi());
+            SwaggerUi::new("/swagger").url("/swagger/openapi.json", ApiDoc::merged());
 
         let state = Arc::new(AppState::new(app_state));
 

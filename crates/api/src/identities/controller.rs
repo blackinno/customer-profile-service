@@ -2,7 +2,7 @@ use crate::middleware::error_handler::AppError;
 use crate::middleware::user_uuid::UserUuid;
 use crate::responses::ApiResponse;
 use crate::routers::AppState;
-use application::identities::dtos::CreateIdentityRequest;
+use application::identities::dtos::{CreateIdentityRequest, IdentityResponse, InvokeTokenResponse};
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
@@ -36,6 +36,15 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/customers/me/identities",
+    responses(
+        (status = 200, description = "List of identities", body = inline(crate::responses::ApiResponse<Vec<IdentityResponse>>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    tag = "Identities",
+)]
 pub async fn get_my_identities(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -44,6 +53,18 @@ pub async fn get_my_identities(
     Ok(Json(ApiResponse::success(identities)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/customers/{user_uuid}/identities",
+    params(
+        ("user_uuid" = Uuid, Path, description = "Customer UUID"),
+    ),
+    responses(
+        (status = 200, description = "List of identities for customer", body = inline(crate::responses::ApiResponse<Vec<IdentityResponse>>)),
+        (status = 404, description = "Customer not found"),
+    ),
+    tag = "Identities",
+)]
 pub async fn get_identities_internal(
     State(state): State<Arc<AppState>>,
     Path(user_uuid): Path<Uuid>,
@@ -56,6 +77,17 @@ pub async fn get_identities_internal(
     Ok(Json(ApiResponse::success(identities)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers/me/identities",
+    request_body = CreateIdentityRequest,
+    responses(
+        (status = 200, description = "Created identity", body = inline(crate::responses::ApiResponse<IdentityResponse>)),
+        (status = 400, description = "Bad request"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    tag = "Identities",
+)]
 pub async fn create_identity(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -69,6 +101,20 @@ pub async fn create_identity(
     Ok(Json(ApiResponse::success(identity)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/v1/customers/me/identities/{provider}/{external_id}",
+    params(
+        ("provider" = String, Path, description = "Identity provider name"),
+        ("external_id" = String, Path, description = "External ID at the provider"),
+    ),
+    responses(
+        (status = 200, description = "Identity deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Identity not found"),
+    ),
+    tag = "Identities",
+)]
 pub async fn delete_identity(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
@@ -82,6 +128,19 @@ pub async fn delete_identity(
     Ok(Json(ApiResponse::success(())))
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/customers/me/identities/{provider_name}/invoke",
+    params(
+        ("provider_name" = String, Path, description = "Identity provider name"),
+    ),
+    responses(
+        (status = 200, description = "Invoked tokens", body = inline(crate::responses::ApiResponse<InvokeTokenResponse>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Identity not found"),
+    ),
+    tag = "Identities",
+)]
 pub async fn invoke_token(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
