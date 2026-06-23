@@ -8,7 +8,8 @@
 # Keep the Rust version in sync with rust-toolchain.toml.
 FROM rust:1.94-alpine3.20 AS chef
 WORKDIR /usr/src/app
-RUN apk add --no-cache build-base openssl-dev pkgconfig curl
+RUN apk add --no-cache build-base openssl-dev openssl-libs-static pkgconfig curl
+ENV OPENSSL_STATIC=true
 RUN cargo install cargo-chef --locked
 
 # Stage 1: planner — produce recipe.json describing the dep graph only.
