@@ -63,10 +63,7 @@ impl The1HttpClient {
     }
 
     /// Retrieve the authenticated user's profile from The1.
-    pub async fn get_profile(
-        &self,
-        access_token: &str,
-    ) -> Result<The1ProfileResponse, String> {
+    pub async fn get_profile(&self, access_token: &str) -> Result<The1ProfileResponse, String> {
         self.http
             .get(format!("{}/customers/me", self.base_url))
             .bearer_auth(access_token)
@@ -80,10 +77,7 @@ impl The1HttpClient {
     }
 
     /// Exchange a refresh token for a new access token via The1's invoke endpoint.
-    pub async fn invoke_token(
-        &self,
-        refresh_token: &str,
-    ) -> Result<InvokeTokenResponse, String> {
+    pub async fn invoke_token(&self, refresh_token: &str) -> Result<InvokeTokenResponse, String> {
         self.http
             .post(format!("{}/auth/invoke", self.base_url))
             .bearer_auth(refresh_token)
@@ -133,10 +127,7 @@ impl The1HttpClient {
 /// The1 without depending on reqwest or any HTTP primitives.
 #[async_trait]
 impl The1Client for The1HttpClient {
-    async fn get_partner_member(
-        &self,
-        card_number: &str,
-    ) -> Result<The1PartnerMemberData, String> {
+    async fn get_partner_member(&self, card_number: &str) -> Result<The1PartnerMemberData, String> {
         let resp = self.fetch_partner_member(card_number).await?;
 
         let user_uuid_str = resp

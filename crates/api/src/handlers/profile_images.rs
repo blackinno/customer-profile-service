@@ -30,10 +30,7 @@ pub async fn upload_profile_image(
         .map_err(|e| AppError::bad_request(e.to_string()))?
     {
         if field.name() == Some("file") {
-            content_type = field
-                .content_type()
-                .unwrap_or("image/jpeg")
-                .to_string();
+            content_type = field.content_type().unwrap_or("image/jpeg").to_string();
             data = field
                 .bytes()
                 .await
@@ -60,11 +57,7 @@ pub async fn get_profile_image(
     State(state): State<Arc<AppState>>,
     UserUuid(user_uuid): UserUuid,
 ) -> Result<impl IntoResponse, AppError> {
-    let response = state
-        .use_cases
-        .profile_images
-        .get_image(user_uuid)
-        .await?;
+    let response = state.use_cases.profile_images.get_image(user_uuid).await?;
 
     Ok((StatusCode::OK, Json(ApiResponse::success(response))))
 }

@@ -105,20 +105,16 @@ impl Settings {
             cloudfront_private_key: required_var("CLOUDFRONT_PRIVATE_KEY")?,
             cloudfront_key_id: required_var("CLOUDFRONT_KEY_ID")?,
             image_expired_in_sec: parse_var("IMAGE_EXPIRED_IN_SEC", 3600u32)?,
-            sns_user_profile_changed: var("SNS_USER_PROFILE_CHANGED")
-                .unwrap_or_default(),
-            sns_email_sent_requested: var("SNS_EMAIL_SENT_REQUESTED")
-                .unwrap_or_default(),
+            sns_user_profile_changed: var("SNS_USER_PROFILE_CHANGED").unwrap_or_default(),
+            sns_email_sent_requested: var("SNS_EMAIL_SENT_REQUESTED").unwrap_or_default(),
             sns_user_identity_linked_changed: var("SNS_USER_IDENTITY_LINKED_CHANGED")
                 .unwrap_or_default(),
             sns_user_the1_get_profile_updated: var("SNS_USER_THE1_GET_PROFILE_UPDATED")
                 .unwrap_or_default(),
             the1_proxy_service_url: required_var("THE1_PROXY_SERVICE_URL")?,
             sms_proxy_service_url: required_var("SMS_PROXY_SERVICE_URL")?,
-            phone_number_format: var("PHONE_NUMBER_FORMAT")
-                .unwrap_or_else(|_| "+66".to_string()),
-            otp_text: var("OTP_TEXT")
-                .unwrap_or_else(|_| "Your OTP is {otp}".to_string()),
+            phone_number_format: var("PHONE_NUMBER_FORMAT").unwrap_or_else(|_| "+66".to_string()),
+            otp_text: var("OTP_TEXT").unwrap_or_else(|_| "Your OTP is {otp}".to_string()),
             otp_expired_time: parse_var("OTP_EXPIRED_TIME", 5u32)?,
             jwt_secret_key: required_var("JWT_SECRET_KEY")?,
             country_code: var("COUNTRY_CODE").unwrap_or_else(|_| "66".to_string()),

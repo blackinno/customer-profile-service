@@ -17,6 +17,7 @@ mod tests {
     /// Configurable mock for all three read paths on The1UserRepository.
     /// Set each `Option` to control what the mock returns:
     ///   `Some(user)` → found,  `None` → not found,  combined with `*_err` for errors.
+    #[derive(Default)]
     struct MockThe1UserRepo {
         by_user: Option<The1User>,
         by_user_err: bool,
@@ -26,56 +27,30 @@ mod tests {
         by_member_err: bool,
     }
 
-    impl Default for MockThe1UserRepo {
-        fn default() -> Self {
-            Self {
-                by_user: None,
-                by_user_err: false,
-                by_card: None,
-                by_card_err: false,
-                by_member: None,
-                by_member_err: false,
-            }
-        }
-    }
-
     #[async_trait]
     impl The1UserRepository for MockThe1UserRepo {
-        async fn find_by_user(
-            &self,
-            _: Uuid,
-        ) -> Result<Option<The1User>, RepositoryError> {
+        async fn find_by_user(&self, _: Uuid) -> Result<Option<The1User>, RepositoryError> {
             if self.by_user_err {
                 return Err(RepositoryError::Backend("mock db error".to_string()));
             }
             Ok(self.by_user.clone())
         }
 
-        async fn find_by_card_number(
-            &self,
-            _: &str,
-        ) -> Result<Option<The1User>, RepositoryError> {
+        async fn find_by_card_number(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
             if self.by_card_err {
                 return Err(RepositoryError::Backend("mock db error".to_string()));
             }
             Ok(self.by_card.clone())
         }
 
-        async fn find_by_member_id(
-            &self,
-            _: &str,
-        ) -> Result<Option<The1User>, RepositoryError> {
+        async fn find_by_member_id(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
             if self.by_member_err {
                 return Err(RepositoryError::Backend("mock db error".to_string()));
             }
             Ok(self.by_member.clone())
         }
 
-        async fn upsert(
-            &self,
-            _: Uuid,
-            _: UpsertThe1User,
-        ) -> Result<The1User, RepositoryError> {
+        async fn upsert(&self, _: Uuid, _: UpsertThe1User) -> Result<The1User, RepositoryError> {
             panic!("upsert not expected in the1 use-case tests")
         }
     }

@@ -40,14 +40,12 @@ impl From<IdentityRow> for Identity {
     }
 }
 
-const SELECT_BASE: &str =
-    "SELECT id, user_uuid, provider_name, external_id, \
+const SELECT_BASE: &str = "SELECT id, user_uuid, provider_name, external_id, \
      provider_id_token, provider_access_token, provider_refresh_token, \
      is_deleted, created_at, updated_at \
      FROM identity_providers ";
 
-const RETURNING: &str =
-    " RETURNING id, user_uuid, provider_name, external_id, \
+const RETURNING: &str = " RETURNING id, user_uuid, provider_name, external_id, \
       provider_id_token, provider_access_token, provider_refresh_token, \
       is_deleted, created_at, updated_at";
 
@@ -65,10 +63,12 @@ impl PgIdentityRepository {
 impl IdentityRepository for PgIdentityRepository {
     async fn find_by_user(&self, user_uuid: Uuid) -> Result<Vec<Identity>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(SELECT_BASE);
-        qb.push("WHERE user_uuid = ").push_bind(user_uuid)
-          .push(" AND is_deleted = false");
+        qb.push("WHERE user_uuid = ")
+            .push_bind(user_uuid)
+            .push(" AND is_deleted = false");
 
-        let rows: Vec<IdentityRow> = qb.build_query_as()
+        let rows: Vec<IdentityRow> = qb
+            .build_query_as()
             .fetch_all(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -83,12 +83,16 @@ impl IdentityRepository for PgIdentityRepository {
         external_id: &str,
     ) -> Result<Option<Identity>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(SELECT_BASE);
-        qb.push("WHERE user_uuid = ").push_bind(user_uuid)
-          .push(" AND provider_name = ").push_bind(provider)
-          .push(" AND external_id = ").push_bind(external_id)
-          .push(" AND is_deleted = false");
+        qb.push("WHERE user_uuid = ")
+            .push_bind(user_uuid)
+            .push(" AND provider_name = ")
+            .push_bind(provider)
+            .push(" AND external_id = ")
+            .push_bind(external_id)
+            .push(" AND is_deleted = false");
 
-        let row: Option<IdentityRow> = qb.build_query_as()
+        let row: Option<IdentityRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -102,11 +106,14 @@ impl IdentityRepository for PgIdentityRepository {
         external_id: &str,
     ) -> Result<Option<Identity>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(SELECT_BASE);
-        qb.push("WHERE provider_name = ").push_bind(provider)
-          .push(" AND external_id = ").push_bind(external_id)
-          .push(" AND is_deleted = true");
+        qb.push("WHERE provider_name = ")
+            .push_bind(provider)
+            .push(" AND external_id = ")
+            .push_bind(external_id)
+            .push(" AND is_deleted = true");
 
-        let row: Option<IdentityRow> = qb.build_query_as()
+        let row: Option<IdentityRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -121,17 +128,24 @@ impl IdentityRepository for PgIdentityRepository {
               provider_id_token, provider_access_token, provider_refresh_token, \
               is_deleted, created_at, updated_at) VALUES (",
         );
-        qb.push_bind(Uuid::new_v4()).push(", ")
-          .push_bind(data.user_uuid).push(", ")
-          .push_bind(data.provider_name).push(", ")
-          .push_bind(data.external_id).push(", ")
-          .push_bind(data.provider_id_token).push(", ")
-          .push_bind(data.provider_access_token).push(", ")
-          .push_bind(data.provider_refresh_token)
-          .push(", false, NOW(), NOW())")
-          .push(RETURNING);
+        qb.push_bind(Uuid::new_v4())
+            .push(", ")
+            .push_bind(data.user_uuid)
+            .push(", ")
+            .push_bind(data.provider_name)
+            .push(", ")
+            .push_bind(data.external_id)
+            .push(", ")
+            .push_bind(data.provider_id_token)
+            .push(", ")
+            .push_bind(data.provider_access_token)
+            .push(", ")
+            .push_bind(data.provider_refresh_token)
+            .push(", false, NOW(), NOW())")
+            .push(RETURNING);
 
-        let row: IdentityRow = qb.build_query_as()
+        let row: IdentityRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -150,13 +164,18 @@ impl IdentityRepository for PgIdentityRepository {
              user_uuid = ",
         );
         qb.push_bind(user_uuid)
-          .push(", is_deleted = false, provider_id_token = ").push_bind(tokens.provider_id_token)
-          .push(", provider_access_token = ").push_bind(tokens.provider_access_token)
-          .push(", provider_refresh_token = ").push_bind(tokens.provider_refresh_token)
-          .push(", updated_at = NOW() WHERE id = ").push_bind(id)
-          .push(RETURNING);
+            .push(", is_deleted = false, provider_id_token = ")
+            .push_bind(tokens.provider_id_token)
+            .push(", provider_access_token = ")
+            .push_bind(tokens.provider_access_token)
+            .push(", provider_refresh_token = ")
+            .push_bind(tokens.provider_refresh_token)
+            .push(", updated_at = NOW() WHERE id = ")
+            .push_bind(id)
+            .push(RETURNING);
 
-        let row: IdentityRow = qb.build_query_as()
+        let row: IdentityRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -169,10 +188,12 @@ impl IdentityRepository for PgIdentityRepository {
             "UPDATE identity_providers SET is_deleted = true, updated_at = NOW() WHERE id = ",
         );
         qb.push_bind(id)
-          .push(" AND user_uuid = ").push_bind(user_uuid)
-          .push(RETURNING);
+            .push(" AND user_uuid = ")
+            .push_bind(user_uuid)
+            .push(RETURNING);
 
-        let row: IdentityRow = qb.build_query_as()
+        let row: IdentityRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -186,15 +207,17 @@ impl IdentityRepository for PgIdentityRepository {
         access_token: Option<String>,
         refresh_token: Option<String>,
     ) -> Result<Identity, RepositoryError> {
-        let mut qb = QueryBuilder::<Postgres>::new(
-            "UPDATE identity_providers SET provider_access_token = ",
-        );
+        let mut qb =
+            QueryBuilder::<Postgres>::new("UPDATE identity_providers SET provider_access_token = ");
         qb.push_bind(access_token)
-          .push(", provider_refresh_token = ").push_bind(refresh_token)
-          .push(", updated_at = NOW() WHERE id = ").push_bind(id)
-          .push(RETURNING);
+            .push(", provider_refresh_token = ")
+            .push_bind(refresh_token)
+            .push(", updated_at = NOW() WHERE id = ")
+            .push_bind(id)
+            .push(RETURNING);
 
-        let row: IdentityRow = qb.build_query_as()
+        let row: IdentityRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -213,13 +236,21 @@ impl IdentityRepository for PgIdentityRepository {
             "INSERT INTO identity_provider_transactions \
              (id, user_uuid, action_type, provider_name, external_id) VALUES (",
         );
-        qb.push_bind(Uuid::new_v4()).push(", ")
-          .push_bind(user_uuid).push(", ")
-          .push_bind(action).push(", ")
-          .push_bind(provider).push(", ")
-          .push_bind(external_id).push(")");
+        qb.push_bind(Uuid::new_v4())
+            .push(", ")
+            .push_bind(user_uuid)
+            .push(", ")
+            .push_bind(action)
+            .push(", ")
+            .push_bind(provider)
+            .push(", ")
+            .push_bind(external_id)
+            .push(")");
 
-        qb.build().execute(&self.pool).await.map_err(map_sqlx_error)?;
+        qb.build()
+            .execute(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
         Ok(())
     }
 }

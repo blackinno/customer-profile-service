@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    http::{header, Method, Request, StatusCode},
+    http::{Method, Request, StatusCode, header},
 };
 use chrono::Utc;
 use serde_json::json;
@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use domain::entities::customer::{Customer, CustomerProfile, Locale};
 
-use crate::integration::helpers::{create_test_app, send_request, InMemoryCustomerRepository};
+use crate::integration::helpers::{InMemoryCustomerRepository, create_test_app, send_request};
 
 // ---- helpers ----
 
@@ -111,10 +111,12 @@ async fn post_customers_duplicate_email_returns_400() {
 
     let (status, body) = send_request(app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert!(body["detail"]
-        .as_str()
-        .map(|s| s.contains("email"))
-        .unwrap_or(false));
+    assert!(
+        body["detail"]
+            .as_str()
+            .map(|s| s.contains("email"))
+            .unwrap_or(false)
+    );
 }
 
 #[tokio::test]

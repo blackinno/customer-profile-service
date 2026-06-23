@@ -2,15 +2,14 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::entities::profile_change::{ChangeStatus, ChangeType, CreateProfileChange, ProfileChange};
+use crate::entities::profile_change::{
+    ChangeStatus, ChangeType, CreateProfileChange, ProfileChange,
+};
 use crate::errors::RepositoryError;
 
 #[async_trait]
 pub trait ProfileChangeRepository: Send + Sync {
-    async fn create(
-        &self,
-        data: CreateProfileChange,
-    ) -> Result<ProfileChange, RepositoryError>;
+    async fn create(&self, data: CreateProfileChange) -> Result<ProfileChange, RepositoryError>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<ProfileChange>, RepositoryError>;
     async fn find_active_by_user_and_type(
         &self,

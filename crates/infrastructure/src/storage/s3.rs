@@ -14,7 +14,11 @@ pub struct S3Storage {
 
 impl S3Storage {
     pub fn new(client: Client, bucket: String, prefix: String) -> Self {
-        Self { client, bucket, prefix }
+        Self {
+            client,
+            bucket,
+            prefix,
+        }
     }
 }
 

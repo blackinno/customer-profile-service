@@ -209,13 +209,16 @@ impl CustomerRepository for PgCustomerRepository {
             .push_bind(now)
             .push(")");
 
-        qb2.build().execute(&mut *tx).await.map_err(map_sqlx_error)?;
+        qb2.build()
+            .execute(&mut *tx)
+            .await
+            .map_err(map_sqlx_error)?;
 
         tx.commit().await.map_err(map_sqlx_error)?;
 
-        self.find_by_id(user_id)
-            .await?
-            .ok_or_else(|| RepositoryError::Backend("created customer not found after insert".to_string()))
+        self.find_by_id(user_id).await?.ok_or_else(|| {
+            RepositoryError::Backend("created customer not found after insert".to_string())
+        })
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Customer>, RepositoryError> {
@@ -315,8 +318,7 @@ impl CustomerRepository for PgCustomerRepository {
         qb.build().execute(&mut *tx).await.map_err(map_sqlx_error)?;
 
         // user_profiles table — always bump updated_at, add optional fields
-        let mut qb2 =
-            QueryBuilder::<Postgres>::new("UPDATE user_profiles SET updated_at = NOW()");
+        let mut qb2 = QueryBuilder::<Postgres>::new("UPDATE user_profiles SET updated_at = NOW()");
 
         if let Some(first_name) = data.first_name {
             qb2.push(", first_name = ").push_bind(first_name);
@@ -337,7 +339,10 @@ impl CustomerRepository for PgCustomerRepository {
         }
 
         qb2.push(" WHERE user_uuid = ").push_bind(id);
-        qb2.build().execute(&mut *tx).await.map_err(map_sqlx_error)?;
+        qb2.build()
+            .execute(&mut *tx)
+            .await
+            .map_err(map_sqlx_error)?;
 
         tx.commit().await.map_err(map_sqlx_error)?;
 
@@ -358,7 +363,10 @@ impl CustomerRepository for PgCustomerRepository {
              WHERE id = ",
         );
         qb.push_bind(id);
-        qb.build().execute(&self.pool).await.map_err(map_sqlx_error)?;
+        qb.build()
+            .execute(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
 
         self.find_by_id(id)
             .await?
@@ -370,13 +378,15 @@ impl CustomerRepository for PgCustomerRepository {
         user_uuid: Uuid,
         image_key: Option<String>,
     ) -> Result<(), RepositoryError> {
-        let mut qb =
-            QueryBuilder::<Postgres>::new("UPDATE user_profiles SET profile_image = ");
+        let mut qb = QueryBuilder::<Postgres>::new("UPDATE user_profiles SET profile_image = ");
         qb.push_bind(image_key)
             .push(", updated_at = NOW() WHERE user_uuid = ")
             .push_bind(user_uuid);
 
-        qb.build().execute(&self.pool).await.map_err(map_sqlx_error)?;
+        qb.build()
+            .execute(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
         Ok(())
     }
 }

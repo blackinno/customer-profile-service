@@ -27,21 +27,15 @@ struct TierRow {
     code: String,
     name: Option<String>,
     expired_date: Option<DateTime<Utc>>,
-    the1_users_id: Uuid,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
 }
 
-const THE1_SELECT: &str =
-    "SELECT id, user_uuid, member_id, account_id, profile_id, \
+const THE1_SELECT: &str = "SELECT id, user_uuid, member_id, account_id, profile_id, \
      card_number, created_at, updated_at FROM the1_users ";
 
-const THE1_RETURNING: &str =
-    " RETURNING id, user_uuid, member_id, account_id, profile_id, \
+const THE1_RETURNING: &str = " RETURNING id, user_uuid, member_id, account_id, profile_id, \
       card_number, created_at, updated_at";
 
-const TIER_RETURNING: &str =
-    " RETURNING id, code, name, expired_date, the1_users_id, created_at, updated_at";
+const TIER_RETURNING: &str = " RETURNING id, code, name, expired_date";
 
 impl From<The1UserRow> for The1User {
     fn from(row: The1UserRow) -> Self {
@@ -86,7 +80,8 @@ impl PgThe1UserRepository {
         );
         qb.push_bind(the1_users_id);
 
-        let rows: Vec<TierRow> = qb.build_query_as()
+        let rows: Vec<TierRow> = qb
+            .build_query_as()
             .fetch_all(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -99,9 +94,12 @@ impl PgThe1UserRepository {
 impl The1UserRepository for PgThe1UserRepository {
     async fn find_by_user(&self, user_uuid: Uuid) -> Result<Option<The1User>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(THE1_SELECT);
-        qb.push("WHERE user_uuid = ").push_bind(user_uuid).push(" LIMIT 1");
+        qb.push("WHERE user_uuid = ")
+            .push_bind(user_uuid)
+            .push(" LIMIT 1");
 
-        let row: Option<The1UserRow> = qb.build_query_as()
+        let row: Option<The1UserRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -117,11 +115,17 @@ impl The1UserRepository for PgThe1UserRepository {
         }
     }
 
-    async fn find_by_card_number(&self, card_number: &str) -> Result<Option<The1User>, RepositoryError> {
+    async fn find_by_card_number(
+        &self,
+        card_number: &str,
+    ) -> Result<Option<The1User>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(THE1_SELECT);
-        qb.push("WHERE card_number = ").push_bind(card_number).push(" LIMIT 1");
+        qb.push("WHERE card_number = ")
+            .push_bind(card_number)
+            .push(" LIMIT 1");
 
-        let row: Option<The1UserRow> = qb.build_query_as()
+        let row: Option<The1UserRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -137,11 +141,17 @@ impl The1UserRepository for PgThe1UserRepository {
         }
     }
 
-    async fn find_by_member_id(&self, member_id: &str) -> Result<Option<The1User>, RepositoryError> {
+    async fn find_by_member_id(
+        &self,
+        member_id: &str,
+    ) -> Result<Option<The1User>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(THE1_SELECT);
-        qb.push("WHERE member_id = ").push_bind(member_id).push(" LIMIT 1");
+        qb.push("WHERE member_id = ")
+            .push_bind(member_id)
+            .push(" LIMIT 1");
 
-        let row: Option<The1UserRow> = qb.build_query_as()
+        let row: Option<The1UserRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -157,14 +167,22 @@ impl The1UserRepository for PgThe1UserRepository {
         }
     }
 
-    async fn upsert(&self, user_uuid: Uuid, profile: UpsertThe1User) -> Result<The1User, RepositoryError> {
+    async fn upsert(
+        &self,
+        user_uuid: Uuid,
+        profile: UpsertThe1User,
+    ) -> Result<The1User, RepositoryError> {
         let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
 
         // Lock the existing row (if any) to guard against concurrent INSERT races.
         let mut select_qb = QueryBuilder::<Postgres>::new(THE1_SELECT);
-        select_qb.push("WHERE user_uuid = ").push_bind(user_uuid).push(" LIMIT 1 FOR UPDATE");
+        select_qb
+            .push("WHERE user_uuid = ")
+            .push_bind(user_uuid)
+            .push(" LIMIT 1 FOR UPDATE");
 
-        let existing: Option<The1UserRow> = select_qb.build_query_as()
+        let existing: Option<The1UserRow> = select_qb
+            .build_query_as()
             .fetch_optional(&mut *tx)
             .await
             .map_err(map_sqlx_error)?;
@@ -177,13 +195,18 @@ impl The1UserRepository for PgThe1UserRepository {
 
             let mut qb = QueryBuilder::<Postgres>::new("UPDATE the1_users SET member_id = ");
             qb.push_bind(&profile.member_id)
-              .push(", account_id = ").push_bind(&profile.account_id)
-              .push(", profile_id = ").push_bind(&profile.profile_id)
-              .push(", card_number = ").push_bind(&profile.card_number)
-              .push(", updated_at = NOW() WHERE id = ").push_bind(the1_users_id)
-              .push(THE1_RETURNING);
+                .push(", account_id = ")
+                .push_bind(&profile.account_id)
+                .push(", profile_id = ")
+                .push_bind(&profile.profile_id)
+                .push(", card_number = ")
+                .push_bind(&profile.card_number)
+                .push(", updated_at = NOW() WHERE id = ")
+                .push_bind(the1_users_id)
+                .push(THE1_RETURNING);
 
-            the1_user_row = qb.build_query_as()
+            the1_user_row = qb
+                .build_query_as()
                 .fetch_one(&mut *tx)
                 .await
                 .map_err(map_sqlx_error)?;
@@ -193,16 +216,22 @@ impl The1UserRepository for PgThe1UserRepository {
                  (id, user_uuid, member_id, account_id, profile_id, \
                   card_number, created_at, updated_at) VALUES (",
             );
-            qb.push_bind(Uuid::new_v4()).push(", ")
-              .push_bind(user_uuid).push(", ")
-              .push_bind(&profile.member_id).push(", ")
-              .push_bind(&profile.account_id).push(", ")
-              .push_bind(&profile.profile_id).push(", ")
-              .push_bind(&profile.card_number)
-              .push(", NOW(), NOW())")
-              .push(THE1_RETURNING);
+            qb.push_bind(Uuid::new_v4())
+                .push(", ")
+                .push_bind(user_uuid)
+                .push(", ")
+                .push_bind(&profile.member_id)
+                .push(", ")
+                .push_bind(&profile.account_id)
+                .push(", ")
+                .push_bind(&profile.profile_id)
+                .push(", ")
+                .push_bind(&profile.card_number)
+                .push(", NOW(), NOW())")
+                .push(THE1_RETURNING);
 
-            the1_user_row = qb.build_query_as()
+            the1_user_row = qb
+                .build_query_as()
                 .fetch_one(&mut *tx)
                 .await
                 .map_err(map_sqlx_error)?;
@@ -212,7 +241,11 @@ impl The1UserRepository for PgThe1UserRepository {
         // Replace all tiers: delete existing, then insert the new set.
         let mut del_qb = QueryBuilder::<Postgres>::new("DELETE FROM tiers WHERE the1_users_id = ");
         del_qb.push_bind(the1_users_id);
-        del_qb.build().execute(&mut *tx).await.map_err(map_sqlx_error)?;
+        del_qb
+            .build()
+            .execute(&mut *tx)
+            .await
+            .map_err(map_sqlx_error)?;
 
         let mut tiers: Vec<Tier> = Vec::with_capacity(profile.tiers.len());
         for tier in &profile.tiers {
@@ -221,15 +254,20 @@ impl The1UserRepository for PgThe1UserRepository {
                  (id, code, name, expired_date, the1_users_id, created_at, updated_at) \
                  VALUES (",
             );
-            qb.push_bind(Uuid::new_v4()).push(", ")
-              .push_bind(&tier.code).push(", ")
-              .push_bind(&tier.name).push(", ")
-              .push_bind(tier.expired_date).push(", ")
-              .push_bind(the1_users_id)
-              .push(", NOW(), NOW())")
-              .push(TIER_RETURNING);
+            qb.push_bind(Uuid::new_v4())
+                .push(", ")
+                .push_bind(&tier.code)
+                .push(", ")
+                .push_bind(&tier.name)
+                .push(", ")
+                .push_bind(tier.expired_date)
+                .push(", ")
+                .push_bind(the1_users_id)
+                .push(", NOW(), NOW())")
+                .push(TIER_RETURNING);
 
-            let tier_row: TierRow = qb.build_query_as()
+            let tier_row: TierRow = qb
+                .build_query_as()
                 .fetch_one(&mut *tx)
                 .await
                 .map_err(map_sqlx_error)?;

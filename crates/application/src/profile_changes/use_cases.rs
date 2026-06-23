@@ -82,11 +82,10 @@ impl ProfileChangeUseCases {
         }
 
         // Fetch current value to store as old_value.
-        let customer = self
-            .customers
-            .find_by_id(user_uuid)
-            .await?
-            .ok_or_else(|| ApplicationError::NotFound(format!("customer {user_uuid} not found")))?;
+        let customer =
+            self.customers.find_by_id(user_uuid).await?.ok_or_else(|| {
+                ApplicationError::NotFound(format!("customer {user_uuid} not found"))
+            })?;
 
         let old_value = match change_type {
             ChangeType::Telephone => customer.phone.clone(),
@@ -185,18 +184,24 @@ impl ProfileChangeUseCases {
 
         let updated = self
             .profile_changes
-            .update_otp(profile_id, otp.clone(), ref_code, otp_expired_at, next_otp_request_at)
+            .update_otp(
+                profile_id,
+                otp.clone(),
+                ref_code,
+                otp_expired_at,
+                next_otp_request_at,
+            )
             .await?;
 
         // Resend SMS for phone changes.
-        if record.change_type == ChangeType::Telephone {
-            if let Some(ref new_phone) = record.new_value {
-                let message = self.config.otp_text.replace("{otp}", &otp);
-                self.sms
-                    .send(new_phone, &message)
-                    .await
-                    .map_err(ApplicationError::External)?;
-            }
+        if record.change_type == ChangeType::Telephone
+            && let Some(ref new_phone) = record.new_value
+        {
+            let message = self.config.otp_text.replace("{otp}", &otp);
+            self.sms
+                .send(new_phone, &message)
+                .await
+                .map_err(ApplicationError::External)?;
         }
 
         Ok(profile_change_to_response(updated))
@@ -239,8 +244,7 @@ impl ProfileChangeUseCases {
             .generate(profile_id, user_uuid, self.config.token_expired_time)
             .map_err(|e| ApplicationError::External(format!("token generation failed: {e}")))?;
 
-        let token_expires =
-            Utc::now() + Duration::minutes(self.config.token_expired_time as i64);
+        let token_expires = Utc::now() + Duration::minutes(self.config.token_expired_time as i64);
 
         let updated = self
             .profile_changes
@@ -341,8 +345,8 @@ fn parse_change_type(s: &str) -> Result<ChangeType, ApplicationError> {
 }
 
 fn normalize_phone(phone: &str, format: &str) -> String {
-    if phone.starts_with('0') {
-        format!("{}{}", format, &phone[1..])
+    if let Some(stripped) = phone.strip_prefix('0') {
+        format!("{}{}", format, stripped)
     } else {
         phone.to_string()
     }

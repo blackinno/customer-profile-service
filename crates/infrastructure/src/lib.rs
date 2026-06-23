@@ -11,7 +11,6 @@ pub mod stages;
 pub mod storage;
 pub mod utils;
 
-pub use background_tasks::*;
 pub use events::*;
 #[cfg(feature = "sns")]
 pub use messaging::*;

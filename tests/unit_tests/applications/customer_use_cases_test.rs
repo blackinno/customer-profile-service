@@ -15,7 +15,7 @@ use application::{
 };
 use domain::{
     entities::customer::{
-        CreateCustomer, Customer, CustomerProfile, Gender, Locale, SearchField, UpdateCustomer,
+        CreateCustomer, Customer, CustomerProfile, Locale, SearchField, UpdateCustomer,
     },
     errors::RepositoryError,
     repositories::customer_repository::CustomerRepository,
@@ -189,8 +189,14 @@ impl CustomerRepository for MockCustomerRepository {
             .get_mut(&id)
             .ok_or_else(|| RepositoryError::NotFound(format!("customer {} not found", id)))?;
 
-        let new_phone = customer.phone.as_ref().map(|p| format!("{}-deleted-{}", p, id));
-        let new_email = customer.email.as_ref().map(|e| format!("{}-deleted-{}", e, id));
+        let new_phone = customer
+            .phone
+            .as_ref()
+            .map(|p| format!("{}-deleted-{}", p, id));
+        let new_email = customer
+            .email
+            .as_ref()
+            .map(|e| format!("{}-deleted-{}", e, id));
         customer.is_deleted = true;
         customer.phone = new_phone;
         customer.email = new_email;
@@ -207,10 +213,10 @@ impl CustomerRepository for MockCustomerRepository {
             return Err(RepositoryError::Backend("mock error".to_string()));
         }
         let mut store = self.store.lock().unwrap();
-        if let Some(customer) = store.get_mut(&user_uuid) {
-            if let Some(profile) = customer.profile.as_mut() {
-                profile.profile_image = image_key;
-            }
+        if let Some(customer) = store.get_mut(&user_uuid)
+            && let Some(profile) = customer.profile.as_mut()
+        {
+            profile.profile_image = image_key;
         }
         Ok(())
     }
@@ -317,7 +323,10 @@ async fn create_no_phone_no_email() {
         nationality: None,
     };
 
-    let resp = uc.create(req).await.expect("should succeed with no email/phone");
+    let resp = uc
+        .create(req)
+        .await
+        .expect("should succeed with no email/phone");
     assert_eq!(resp.locale, "th"); // defaults to Th
 }
 
@@ -386,7 +395,10 @@ async fn create_repo_error_propagated() {
         nationality: None,
     };
 
-    let err = uc.create(req).await.expect_err("should propagate repo error");
+    let err = uc
+        .create(req)
+        .await
+        .expect_err("should propagate repo error");
     assert!(matches!(err, ApplicationError::Repository(_)));
 }
 
@@ -607,10 +619,7 @@ async fn update_me_email_conflict_with_other_user_returns_bad_request() {
         nationality: None,
     };
 
-    let err = uc
-        .update_me(frank_id, req)
-        .await
-        .expect_err("should fail");
+    let err = uc.update_me(frank_id, req).await.expect_err("should fail");
     assert!(matches!(err, ApplicationError::BadRequest(m) if m.contains("email")));
 }
 
@@ -633,7 +642,9 @@ async fn update_me_same_email_allowed() {
         nationality: None,
     };
 
-    uc.update_me(id, req).await.expect("same email should be allowed");
+    uc.update_me(id, req)
+        .await
+        .expect("same email should be allowed");
 }
 
 // ---- delete tests ----
@@ -655,11 +666,11 @@ async fn delete_not_found_propagates_error() {
     let uc = CustomerUseCases::new(repo, test_config());
 
     // soft_delete on a missing id should propagate a repository NotFound as Repository error
-    let err = uc
-        .delete(Uuid::new_v4())
-        .await
-        .expect_err("should fail");
-    assert!(matches!(err, ApplicationError::Repository(RepositoryError::NotFound(_))));
+    let err = uc.delete(Uuid::new_v4()).await.expect_err("should fail");
+    assert!(matches!(
+        err,
+        ApplicationError::Repository(RepositoryError::NotFound(_))
+    ));
 }
 
 // ---- update_profile_image tests ----
@@ -699,7 +710,10 @@ async fn update_profile_image_clear_key() {
         .expect("should succeed");
 
     let store = repo.store.lock().unwrap();
-    let profile_image = store[&id].profile.as_ref().and_then(|p| p.profile_image.as_deref());
+    let profile_image = store[&id]
+        .profile
+        .as_ref()
+        .and_then(|p| p.profile_image.as_deref());
     assert!(profile_image.is_none());
 }
 

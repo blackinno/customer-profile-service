@@ -1,16 +1,11 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Locale {
+    #[default]
     Th,
     En,
-}
-
-impl Default for Locale {
-    fn default() -> Self {
-        Self::Th
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

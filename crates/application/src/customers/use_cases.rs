@@ -34,15 +34,19 @@ impl CustomerUseCases {
 
         // Uniqueness guards – checked before touching the repo so the error messages
         // are clean business-rule violations rather than DB constraint errors.
-        if let Some(ref email) = req.email {
-            if self.customers.find_by_email(email).await?.is_some() {
-                return Err(ApplicationError::BadRequest("email already in use".to_string()));
-            }
+        if let Some(ref email) = req.email
+            && self.customers.find_by_email(email).await?.is_some()
+        {
+            return Err(ApplicationError::BadRequest(
+                "email already in use".to_string(),
+            ));
         }
-        if let Some(ref p) = phone {
-            if self.customers.find_by_phone(p).await?.is_some() {
-                return Err(ApplicationError::BadRequest("phone already in use".to_string()));
-            }
+        if let Some(ref p) = phone
+            && self.customers.find_by_phone(p).await?.is_some()
+        {
+            return Err(ApplicationError::BadRequest(
+                "phone already in use".to_string(),
+            ));
         }
 
         let customer = self
@@ -91,13 +95,9 @@ impl CustomerUseCases {
     }
 
     pub async fn get_me(&self, user_uuid: Uuid) -> Result<CustomerResponse, ApplicationError> {
-        let customer = self
-            .customers
-            .find_by_id(user_uuid)
-            .await?
-            .ok_or_else(|| {
-                ApplicationError::NotFound(format!("customer {} not found", user_uuid))
-            })?;
+        let customer = self.customers.find_by_id(user_uuid).await?.ok_or_else(|| {
+            ApplicationError::NotFound(format!("customer {} not found", user_uuid))
+        })?;
 
         if customer.is_deleted {
             return Err(ApplicationError::NotFound(format!(
@@ -116,14 +116,13 @@ impl CustomerUseCases {
     ) -> Result<CustomerResponse, ApplicationError> {
         // If the caller is changing their email, ensure the new address is free
         // (allow re-submitting the same email they already own).
-        if let Some(ref email) = req.email {
-            if let Some(existing) = self.customers.find_by_email(email).await? {
-                if existing.id != user_uuid {
-                    return Err(ApplicationError::BadRequest(
-                        "email already in use".to_string(),
-                    ));
-                }
-            }
+        if let Some(ref email) = req.email
+            && let Some(existing) = self.customers.find_by_email(email).await?
+            && existing.id != user_uuid
+        {
+            return Err(ApplicationError::BadRequest(
+                "email already in use".to_string(),
+            ));
         }
 
         let customer = self
@@ -169,8 +168,8 @@ impl CustomerUseCases {
 
 /// Strips a leading '0' and prepends the configured country format (e.g. "+66").
 fn normalize_phone(phone: &str, format: &str) -> String {
-    if phone.starts_with('0') {
-        format!("{}{}", format, &phone[1..])
+    if let Some(stripped) = phone.strip_prefix('0') {
+        format!("{}{}", format, stripped)
     } else {
         phone.to_string()
     }

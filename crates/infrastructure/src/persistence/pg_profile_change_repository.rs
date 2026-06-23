@@ -85,8 +85,7 @@ impl From<ProfileChangeRow> for ProfileChange {
 }
 
 /// SELECT projection — casts PostgreSQL enums back to TEXT for FromRow.
-const SELECT_BASE: &str =
-    "SELECT id, user_uuid, \
+const SELECT_BASE: &str = "SELECT id, user_uuid, \
      change_type::TEXT AS change_type, \
      identifier, old_value, new_value, \
      status::TEXT AS status, \
@@ -95,8 +94,7 @@ const SELECT_BASE: &str =
      created_at, updated_at \
      FROM profile_changes ";
 
-const RETURNING: &str =
-    " RETURNING id, user_uuid, \
+const RETURNING: &str = " RETURNING id, user_uuid, \
       change_type::TEXT AS change_type, \
       identifier, old_value, new_value, \
       status::TEXT AS status, \
@@ -123,21 +121,34 @@ impl ProfileChangeRepository for PgProfileChangeRepository {
               otp, ref_code, token_expired_at, next_otp_request_at, otp_expired_at) \
              VALUES (",
         );
-        qb.push_bind(Uuid::new_v4()).push(", ")
-          .push_bind(data.user_uuid).push(", ")
-          .push_bind(change_type_to_str(&data.change_type)).push("::change_type_enum, ")
-          .push_bind(data.identifier).push(", ")
-          .push_bind(data.old_value).push(", ")
-          .push_bind(data.new_value).push(", ")
-          .push_bind(change_status_to_str(&data.status)).push("::change_type_status_enum, ")
-          .push_bind(data.otp).push(", ")
-          .push_bind(data.ref_code).push(", ")
-          .push_bind(data.token_expired_at).push(", ")
-          .push_bind(data.next_otp_request_at).push(", ")
-          .push_bind(data.otp_expired_at).push(")")
-          .push(RETURNING);
+        qb.push_bind(Uuid::new_v4())
+            .push(", ")
+            .push_bind(data.user_uuid)
+            .push(", ")
+            .push_bind(change_type_to_str(&data.change_type))
+            .push("::change_type_enum, ")
+            .push_bind(data.identifier)
+            .push(", ")
+            .push_bind(data.old_value)
+            .push(", ")
+            .push_bind(data.new_value)
+            .push(", ")
+            .push_bind(change_status_to_str(&data.status))
+            .push("::change_type_status_enum, ")
+            .push_bind(data.otp)
+            .push(", ")
+            .push_bind(data.ref_code)
+            .push(", ")
+            .push_bind(data.token_expired_at)
+            .push(", ")
+            .push_bind(data.next_otp_request_at)
+            .push(", ")
+            .push_bind(data.otp_expired_at)
+            .push(")")
+            .push(RETURNING);
 
-        let row: ProfileChangeRow = qb.build_query_as()
+        let row: ProfileChangeRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -149,7 +160,8 @@ impl ProfileChangeRepository for PgProfileChangeRepository {
         let mut qb = QueryBuilder::<Postgres>::new(SELECT_BASE);
         qb.push("WHERE id = ").push_bind(id);
 
-        let row: Option<ProfileChangeRow> = qb.build_query_as()
+        let row: Option<ProfileChangeRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -163,18 +175,21 @@ impl ProfileChangeRepository for PgProfileChangeRepository {
         change_type: ChangeType,
     ) -> Result<Option<ProfileChange>, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new(SELECT_BASE);
-        qb.push("WHERE user_uuid = ").push_bind(user_uuid)
-          .push(" AND change_type = ").push_bind(change_type_to_str(&change_type))
-          .push("::change_type_enum")
-          .push(
-              " AND status NOT IN (\
+        qb.push("WHERE user_uuid = ")
+            .push_bind(user_uuid)
+            .push(" AND change_type = ")
+            .push_bind(change_type_to_str(&change_type))
+            .push("::change_type_enum")
+            .push(
+                " AND status NOT IN (\
                'completed'::change_type_status_enum, \
                'pending_change_top_confirmation'::change_type_status_enum\
                )",
-          )
-          .push(" ORDER BY created_at DESC LIMIT 1");
+            )
+            .push(" ORDER BY created_at DESC LIMIT 1");
 
-        let row: Option<ProfileChangeRow> = qb.build_query_as()
+        let row: Option<ProfileChangeRow> = qb
+            .build_query_as()
             .fetch_optional(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -192,13 +207,18 @@ impl ProfileChangeRepository for PgProfileChangeRepository {
     ) -> Result<ProfileChange, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new("UPDATE profile_changes SET otp = ");
         qb.push_bind(otp)
-          .push(", ref_code = ").push_bind(ref_code)
-          .push(", otp_expired_at = ").push_bind(expires)
-          .push(", next_otp_request_at = ").push_bind(next_request)
-          .push(", updated_at = NOW() WHERE id = ").push_bind(id)
-          .push(RETURNING);
+            .push(", ref_code = ")
+            .push_bind(ref_code)
+            .push(", otp_expired_at = ")
+            .push_bind(expires)
+            .push(", next_otp_request_at = ")
+            .push_bind(next_request)
+            .push(", updated_at = NOW() WHERE id = ")
+            .push_bind(id)
+            .push(RETURNING);
 
-        let row: ProfileChangeRow = qb.build_query_as()
+        let row: ProfileChangeRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
@@ -214,14 +234,19 @@ impl ProfileChangeRepository for PgProfileChangeRepository {
         token_expires: Option<DateTime<Utc>>,
     ) -> Result<ProfileChange, RepositoryError> {
         let mut qb = QueryBuilder::<Postgres>::new("UPDATE profile_changes SET status = ");
-        qb.push_bind(change_status_to_str(&status)).push("::change_type_status_enum")
-          .push(", token = ").push_bind(token)
-          .push(", token_expired_at = COALESCE(").push_bind(token_expires)
-          .push(", token_expired_at)")
-          .push(", updated_at = NOW() WHERE id = ").push_bind(id)
-          .push(RETURNING);
+        qb.push_bind(change_status_to_str(&status))
+            .push("::change_type_status_enum")
+            .push(", token = ")
+            .push_bind(token)
+            .push(", token_expired_at = COALESCE(")
+            .push_bind(token_expires)
+            .push(", token_expired_at)")
+            .push(", updated_at = NOW() WHERE id = ")
+            .push_bind(id)
+            .push(RETURNING);
 
-        let row: ProfileChangeRow = qb.build_query_as()
+        let row: ProfileChangeRow = qb
+            .build_query_as()
             .fetch_one(&self.pool)
             .await
             .map_err(map_sqlx_error)?;

@@ -6,12 +6,12 @@ use axum::{
 use std::sync::Arc;
 use uuid::Uuid;
 
-use application::identities::dtos::CreateIdentityRequest;
 use crate::{
     middleware::{error_handler::AppError, user_uuid::UserUuid},
     responses::ApiResponse,
     routers::AppState,
 };
+use application::identities::dtos::CreateIdentityRequest;
 
 /// `GET /v1/customers/me/identities`
 ///
