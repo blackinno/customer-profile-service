@@ -4,7 +4,11 @@ use crate::middleware::{apply_observability_layers, metrics_router};
 use application::UseCases;
 use axum::http::StatusCode;
 use axum::response::Json;
-use axum::{Router, extract::State, routing::{delete, get, post, put}};
+use axum::{
+    Router,
+    extract::State,
+    routing::{delete, get, post, put},
+};
 use infrastructure::AppFactoryState;
 use metrics_exporter_prometheus::PrometheusHandle;
 use sqlx::PgPool;
@@ -60,8 +64,14 @@ impl Routers {
             .route("/customers/{id}", get(customers::get_customer_by_id))
             .route("/customers/{id}", delete(customers::delete_customer))
             // Identities
-            .route("/customers/me/identities", get(identities::get_my_identities))
-            .route("/customers/me/identities", post(identities::create_identity))
+            .route(
+                "/customers/me/identities",
+                get(identities::get_my_identities),
+            )
+            .route(
+                "/customers/me/identities",
+                post(identities::create_identity),
+            )
             .route(
                 "/customers/me/identities/{provider}/{external_id}",
                 delete(identities::delete_identity),

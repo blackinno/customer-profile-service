@@ -46,7 +46,12 @@ impl ProfileImageUseCases {
         storage: Arc<dyn ImageStorage>,
         signer: Arc<dyn UrlSigner>,
     ) -> Self {
-        Self { customers, config, storage, signer }
+        Self {
+            customers,
+            config,
+            storage,
+            signer,
+        }
     }
 
     /// Validate, upload, and persist a customer's profile image.
@@ -63,7 +68,9 @@ impl ProfileImageUseCases {
     ) -> Result<ProfileImageResponse, ApplicationError> {
         // 1. Validate content type against the allowlist
         if !self.config.allow_image_types.contains(&content_type) {
-            return Err(ApplicationError::BadRequest("unsupported image type".to_string()));
+            return Err(ApplicationError::BadRequest(
+                "unsupported image type".to_string(),
+            ));
         }
 
         // 2. Validate file size (config specifies limit in megabytes)
@@ -100,11 +107,10 @@ impl ProfileImageUseCases {
         &self,
         user_uuid: Uuid,
     ) -> Result<ProfileImageResponse, ApplicationError> {
-        let customer = self
-            .customers
-            .find_by_id(user_uuid)
-            .await?
-            .ok_or_else(|| ApplicationError::NotFound(format!("customer {user_uuid} not found")))?;
+        let customer =
+            self.customers.find_by_id(user_uuid).await?.ok_or_else(|| {
+                ApplicationError::NotFound(format!("customer {user_uuid} not found"))
+            })?;
 
         let profile = customer
             .profile
@@ -124,11 +130,10 @@ impl ProfileImageUseCases {
 
     /// Delete the customer's profile image from object storage and clear the DB reference.
     pub async fn delete_image(&self, user_uuid: Uuid) -> Result<(), ApplicationError> {
-        let customer = self
-            .customers
-            .find_by_id(user_uuid)
-            .await?
-            .ok_or_else(|| ApplicationError::NotFound(format!("customer {user_uuid} not found")))?;
+        let customer =
+            self.customers.find_by_id(user_uuid).await?.ok_or_else(|| {
+                ApplicationError::NotFound(format!("customer {user_uuid} not found"))
+            })?;
 
         let profile = customer
             .profile
@@ -143,9 +148,7 @@ impl ProfileImageUseCases {
             .await
             .map_err(ApplicationError::External)?;
 
-        self.customers
-            .update_profile_image(user_uuid, None)
-            .await?;
+        self.customers.update_profile_image(user_uuid, None).await?;
 
         Ok(())
     }

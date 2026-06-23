@@ -25,10 +25,7 @@ pub struct The1PartnerMemberData {
 /// application layer stays free of reqwest / HTTP details.
 #[async_trait]
 pub trait The1Client: Send + Sync {
-    async fn get_partner_member(
-        &self,
-        card_number: &str,
-    ) -> Result<The1PartnerMemberData, String>;
+    async fn get_partner_member(&self, card_number: &str) -> Result<The1PartnerMemberData, String>;
 }
 
 pub struct SegmentUseCases {
@@ -37,10 +34,7 @@ pub struct SegmentUseCases {
 }
 
 impl SegmentUseCases {
-    pub fn new(
-        the1_users: Arc<dyn The1UserRepository>,
-        the1_client: Arc<dyn The1Client>,
-    ) -> Self {
+    pub fn new(the1_users: Arc<dyn The1UserRepository>, the1_client: Arc<dyn The1Client>) -> Self {
         Self {
             the1_users,
             the1_client,

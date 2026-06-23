@@ -6,7 +6,7 @@ use axum::{
     Router,
     body::Body,
     http::{Request, StatusCode},
-    routing::{delete, get, post, put},
+    routing::{get, post},
 };
 use chrono::Utc;
 use tower::ServiceExt;
@@ -25,7 +25,7 @@ use application::{
 use domain::{
     entities::{
         customer::{
-            CreateCustomer, Customer, CustomerProfile, Gender, Locale, SearchField, UpdateCustomer,
+            CreateCustomer, Customer, CustomerProfile, Locale, SearchField, UpdateCustomer,
         },
         identity::{CreateIdentity, Identity},
         profile_change::{ChangeStatus, ChangeType, CreateProfileChange, ProfileChange},
@@ -196,10 +196,10 @@ impl CustomerRepository for InMemoryCustomerRepository {
         image_key: Option<String>,
     ) -> Result<(), RepositoryError> {
         let mut store = self.store.lock().unwrap();
-        if let Some(c) = store.get_mut(&user_uuid) {
-            if let Some(p) = c.profile.as_mut() {
-                p.profile_image = image_key;
-            }
+        if let Some(c) = store.get_mut(&user_uuid)
+            && let Some(p) = c.profile.as_mut()
+        {
+            p.profile_image = image_key;
         }
         Ok(())
     }

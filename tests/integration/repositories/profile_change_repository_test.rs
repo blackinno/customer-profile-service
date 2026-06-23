@@ -8,8 +8,7 @@ use domain::{
         profile_change::{ChangeStatus, ChangeType, CreateProfileChange},
     },
     repositories::{
-        customer_repository::CustomerRepository,
-        profile_change_repository::ProfileChangeRepository,
+        customer_repository::CustomerRepository, profile_change_repository::ProfileChangeRepository,
     },
 };
 use infrastructure::persistence::{
@@ -62,7 +61,10 @@ async fn create_and_find_by_id(pool: PgPool) {
     let user = seed_user(&pool).await;
     let repo = PgProfileChangeRepository::new(pool);
 
-    let pc = repo.create(pending_change(user, ChangeType::Telephone)).await.unwrap();
+    let pc = repo
+        .create(pending_change(user, ChangeType::Telephone))
+        .await
+        .unwrap();
 
     assert_eq!(pc.user_uuid, user);
     assert_eq!(pc.change_type, ChangeType::Telephone);
@@ -88,9 +90,14 @@ async fn find_active_by_user_and_type_returns_pending(pool: PgPool) {
     let user = seed_user(&pool).await;
     let repo = PgProfileChangeRepository::new(pool);
 
-    repo.create(pending_change(user, ChangeType::Email)).await.unwrap();
+    repo.create(pending_change(user, ChangeType::Email))
+        .await
+        .unwrap();
 
-    let found = repo.find_active_by_user_and_type(user, ChangeType::Email).await.unwrap();
+    let found = repo
+        .find_active_by_user_and_type(user, ChangeType::Email)
+        .await
+        .unwrap();
     assert!(found.is_some());
     assert_eq!(found.unwrap().status, ChangeStatus::PendingVerifyOtp);
 }
@@ -100,10 +107,18 @@ async fn find_active_by_user_and_type_returns_none_for_completed(pool: PgPool) {
     let user = seed_user(&pool).await;
     let repo = PgProfileChangeRepository::new(pool);
 
-    let pc = repo.create(pending_change(user, ChangeType::Email)).await.unwrap();
-    repo.update_status_and_token(pc.id, ChangeStatus::Completed, None, None).await.unwrap();
+    let pc = repo
+        .create(pending_change(user, ChangeType::Email))
+        .await
+        .unwrap();
+    repo.update_status_and_token(pc.id, ChangeStatus::Completed, None, None)
+        .await
+        .unwrap();
 
-    let found = repo.find_active_by_user_and_type(user, ChangeType::Email).await.unwrap();
+    let found = repo
+        .find_active_by_user_and_type(user, ChangeType::Email)
+        .await
+        .unwrap();
     assert!(found.is_none());
 }
 
@@ -116,16 +131,22 @@ async fn update_otp_replaces_otp_and_ref(pool: PgPool) {
     let user = seed_user(&pool).await;
     let repo = PgProfileChangeRepository::new(pool);
 
-    let pc = repo.create(pending_change(user, ChangeType::Telephone)).await.unwrap();
+    let pc = repo
+        .create(pending_change(user, ChangeType::Telephone))
+        .await
+        .unwrap();
     let now = Utc::now();
 
-    let updated = repo.update_otp(
-        pc.id,
-        "999999".to_string(),
-        "NEWREF".to_string(),
-        now + chrono::Duration::seconds(60),
-        now + chrono::Duration::seconds(300),
-    ).await.unwrap();
+    let updated = repo
+        .update_otp(
+            pc.id,
+            "999999".to_string(),
+            "NEWREF".to_string(),
+            now + chrono::Duration::seconds(60),
+            now + chrono::Duration::seconds(300),
+        )
+        .await
+        .unwrap();
 
     assert_eq!(updated.otp.as_deref(), Some("999999"));
     assert_eq!(updated.ref_code.as_deref(), Some("NEWREF"));
@@ -140,15 +161,21 @@ async fn update_status_sets_verified(pool: PgPool) {
     let user = seed_user(&pool).await;
     let repo = PgProfileChangeRepository::new(pool);
 
-    let pc = repo.create(pending_change(user, ChangeType::Email)).await.unwrap();
+    let pc = repo
+        .create(pending_change(user, ChangeType::Email))
+        .await
+        .unwrap();
     let expiry = Utc::now() + chrono::Duration::seconds(3600);
 
-    let updated = repo.update_status_and_token(
-        pc.id,
-        ChangeStatus::VerifyChangeCompleted,
-        Some("jwt-token".to_string()),
-        Some(expiry),
-    ).await.unwrap();
+    let updated = repo
+        .update_status_and_token(
+            pc.id,
+            ChangeStatus::VerifyChangeCompleted,
+            Some("jwt-token".to_string()),
+            Some(expiry),
+        )
+        .await
+        .unwrap();
 
     assert_eq!(updated.status, ChangeStatus::VerifyChangeCompleted);
     assert_eq!(updated.token.as_deref(), Some("jwt-token"));
@@ -159,8 +186,14 @@ async fn update_status_to_completed(pool: PgPool) {
     let user = seed_user(&pool).await;
     let repo = PgProfileChangeRepository::new(pool);
 
-    let pc = repo.create(pending_change(user, ChangeType::Email)).await.unwrap();
-    let updated = repo.update_status_and_token(pc.id, ChangeStatus::Completed, None, None).await.unwrap();
+    let pc = repo
+        .create(pending_change(user, ChangeType::Email))
+        .await
+        .unwrap();
+    let updated = repo
+        .update_status_and_token(pc.id, ChangeStatus::Completed, None, None)
+        .await
+        .unwrap();
 
     assert_eq!(updated.status, ChangeStatus::Completed);
 }

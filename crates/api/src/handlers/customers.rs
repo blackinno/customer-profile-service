@@ -1,8 +1,8 @@
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -11,7 +11,9 @@ use crate::middleware::error_handler::AppError;
 use crate::middleware::user_uuid::UserUuid;
 use crate::responses::ApiResponse;
 use crate::routers::AppState;
-use application::customers::dtos::{CreateCustomerRequest, SearchCustomerQuery, UpdateCustomerRequest};
+use application::customers::dtos::{
+    CreateCustomerRequest, SearchCustomerQuery, UpdateCustomerRequest,
+};
 
 /// POST /customers — create a new customer account.
 pub async fn create_customer(

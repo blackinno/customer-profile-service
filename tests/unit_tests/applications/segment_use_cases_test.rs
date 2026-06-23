@@ -8,7 +8,7 @@ mod tests {
 
     use application::errors::ApplicationError;
     use application::segments::use_cases::{SegmentUseCases, The1Client, The1PartnerMemberData};
-    use domain::entities::the1_user::{The1User, Tier, UpsertTier, UpsertThe1User};
+    use domain::entities::the1_user::{The1User, Tier, UpsertThe1User, UpsertTier};
     use domain::errors::RepositoryError;
     use domain::repositories::the1_user_repository::The1UserRepository;
 
@@ -28,17 +28,11 @@ mod tests {
             panic!("find_by_user not expected in segment tests")
         }
 
-        async fn find_by_card_number(
-            &self,
-            _: &str,
-        ) -> Result<Option<The1User>, RepositoryError> {
+        async fn find_by_card_number(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
             panic!("find_by_card_number not expected in segment tests")
         }
 
-        async fn find_by_member_id(
-            &self,
-            _: &str,
-        ) -> Result<Option<The1User>, RepositoryError> {
+        async fn find_by_member_id(&self, _: &str) -> Result<Option<The1User>, RepositoryError> {
             panic!("find_by_member_id not expected in segment tests")
         }
 
@@ -181,10 +175,21 @@ mod tests {
             upsert_user: Some(make_the1_user(user_uuid, tiers)),
         };
         let client = MockThe1Client {
-            partner_data: Some(make_partner_data(user_uuid, vec![
-                UpsertTier { code: "FIRST".to_string(), name: None, expired_date: None },
-                UpsertTier { code: "SECOND".to_string(), name: None, expired_date: None },
-            ])),
+            partner_data: Some(make_partner_data(
+                user_uuid,
+                vec![
+                    UpsertTier {
+                        code: "FIRST".to_string(),
+                        name: None,
+                        expired_date: None,
+                    },
+                    UpsertTier {
+                        code: "SECOND".to_string(),
+                        name: None,
+                        expired_date: None,
+                    },
+                ],
+            )),
         };
 
         let uc = SegmentUseCases::new(Arc::new(repo), Arc::new(client));

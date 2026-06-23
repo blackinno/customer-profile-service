@@ -1,5 +1,5 @@
 use application::profile_images::use_cases::UrlSigner;
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, pkcs1::DecodeRsaPrivateKey};
 use sha1::{Digest, Sha1};
 
@@ -30,14 +30,18 @@ impl CloudFrontSigner {
         expires_in_secs: u32,
     ) -> anyhow::Result<Self> {
         let private_key = RsaPrivateKey::from_pkcs1_pem(pem)?;
-        Ok(Self { private_key, key_id, base_url, expires_in_secs })
+        Ok(Self {
+            private_key,
+            key_id,
+            base_url,
+            expires_in_secs,
+        })
     }
 }
 
 impl UrlSigner for CloudFrontSigner {
     fn sign_url(&self, object_key: &str) -> Result<String, String> {
-        let expires =
-            chrono::Utc::now().timestamp() as u64 + self.expires_in_secs as u64;
+        let expires = chrono::Utc::now().timestamp() as u64 + self.expires_in_secs as u64;
 
         let url = format!(
             "{}/{}",

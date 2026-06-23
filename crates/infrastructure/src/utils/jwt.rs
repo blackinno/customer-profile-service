@@ -6,9 +6,9 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
 struct ProfileChangeClaims {
-    sub: String,       // profile_change_id
+    sub: String, // profile_change_id
     user_uuid: String,
-    exp: usize,        // Unix timestamp
+    exp: usize, // Unix timestamp
 }
 
 /// JWT-based implementation of `TokenService` for profile-change confirmation tokens.
@@ -51,10 +51,8 @@ impl TokenService for JwtTokenService {
         )
         .map_err(|e| e.to_string())?;
 
-        let profile_change_id =
-            Uuid::parse_str(&data.claims.sub).map_err(|e| e.to_string())?;
-        let user_uuid =
-            Uuid::parse_str(&data.claims.user_uuid).map_err(|e| e.to_string())?;
+        let profile_change_id = Uuid::parse_str(&data.claims.sub).map_err(|e| e.to_string())?;
+        let user_uuid = Uuid::parse_str(&data.claims.user_uuid).map_err(|e| e.to_string())?;
         Ok((profile_change_id, user_uuid))
     }
 }

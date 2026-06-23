@@ -11,10 +11,8 @@ pub trait The1UserRepository: Send + Sync {
         &self,
         card_number: &str,
     ) -> Result<Option<The1User>, RepositoryError>;
-    async fn find_by_member_id(
-        &self,
-        member_id: &str,
-    ) -> Result<Option<The1User>, RepositoryError>;
+    async fn find_by_member_id(&self, member_id: &str)
+    -> Result<Option<The1User>, RepositoryError>;
     async fn upsert(
         &self,
         user_uuid: Uuid,

@@ -29,11 +29,17 @@ fn make_customer(email: Option<&str>, phone: Option<&str>) -> CreateCustomer {
 #[sqlx::test(migrations = "./migrations")]
 async fn create_and_find_by_id(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    let customer = repo.create(make_customer(Some("jane@test.com"), None)).await.unwrap();
+    let customer = repo
+        .create(make_customer(Some("jane@test.com"), None))
+        .await
+        .unwrap();
 
     assert!(customer.profile.is_some());
     assert_eq!(customer.email.as_deref(), Some("jane@test.com"));
-    assert_eq!(customer.profile.as_ref().unwrap().first_name.as_deref(), Some("Jane"));
+    assert_eq!(
+        customer.profile.as_ref().unwrap().first_name.as_deref(),
+        Some("Jane")
+    );
 
     let found = repo.find_by_id(customer.id).await.unwrap().unwrap();
     assert_eq!(found.id, customer.id);
@@ -53,7 +59,9 @@ async fn find_by_id_returns_none_for_unknown(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn find_by_email(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    repo.create(make_customer(Some("find@test.com"), None)).await.unwrap();
+    repo.create(make_customer(Some("find@test.com"), None))
+        .await
+        .unwrap();
 
     let found = repo.find_by_email("find@test.com").await.unwrap().unwrap();
     assert_eq!(found.email.as_deref(), Some("find@test.com"));
@@ -69,7 +77,9 @@ async fn find_by_email_returns_none_for_unknown(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn find_by_phone(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    repo.create(make_customer(None, Some("+66811111111"))).await.unwrap();
+    repo.create(make_customer(None, Some("+66811111111")))
+        .await
+        .unwrap();
 
     let found = repo.find_by_phone("+66811111111").await.unwrap().unwrap();
     assert_eq!(found.phone.as_deref(), Some("+66811111111"));
@@ -82,7 +92,10 @@ async fn find_by_phone(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn search_by_id(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    let customer = repo.create(make_customer(Some("search@test.com"), None)).await.unwrap();
+    let customer = repo
+        .create(make_customer(Some("search@test.com"), None))
+        .await
+        .unwrap();
 
     let results = repo.search(SearchField::Id(customer.id)).await.unwrap();
     assert_eq!(results.len(), 1);
@@ -92,9 +105,14 @@ async fn search_by_id(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn search_by_phone(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    repo.create(make_customer(None, Some("+66822222222"))).await.unwrap();
+    repo.create(make_customer(None, Some("+66822222222")))
+        .await
+        .unwrap();
 
-    let results = repo.search(SearchField::Phone("+66822222222".to_string())).await.unwrap();
+    let results = repo
+        .search(SearchField::Phone("+66822222222".to_string()))
+        .await
+        .unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].phone.as_deref(), Some("+66822222222"));
 }
@@ -106,22 +124,34 @@ async fn search_by_phone(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn update_customer_fields(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    let customer = repo.create(make_customer(Some("upd@test.com"), None)).await.unwrap();
+    let customer = repo
+        .create(make_customer(Some("upd@test.com"), None))
+        .await
+        .unwrap();
 
-    let updated = repo.update(customer.id, UpdateCustomer {
-        email: None,
-        phone: Some("+66899999999".to_string()),
-        first_name: Some("Updated".to_string()),
-        last_name: None,
-        birthdate: None,
-        gender: Some(Gender::Male),
-        nationality: None,
-        locale: Some(Locale::En),
-        has_consent: Some(false),
-    }).await.unwrap();
+    let updated = repo
+        .update(
+            customer.id,
+            UpdateCustomer {
+                email: None,
+                phone: Some("+66899999999".to_string()),
+                first_name: Some("Updated".to_string()),
+                last_name: None,
+                birthdate: None,
+                gender: Some(Gender::Male),
+                nationality: None,
+                locale: Some(Locale::En),
+                has_consent: Some(false),
+            },
+        )
+        .await
+        .unwrap();
 
     assert_eq!(updated.phone.as_deref(), Some("+66899999999"));
-    assert_eq!(updated.profile.as_ref().unwrap().first_name.as_deref(), Some("Updated"));
+    assert_eq!(
+        updated.profile.as_ref().unwrap().first_name.as_deref(),
+        Some("Updated")
+    );
     assert_eq!(updated.profile.as_ref().unwrap().gender, Some(Gender::Male));
 }
 
@@ -132,15 +162,27 @@ async fn update_customer_fields(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn soft_delete_marks_deleted_and_frees_email(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    let customer = repo.create(make_customer(Some("del@test.com"), None)).await.unwrap();
+    let customer = repo
+        .create(make_customer(Some("del@test.com"), None))
+        .await
+        .unwrap();
 
     let deleted = repo.soft_delete(customer.id).await.unwrap();
     assert!(deleted.is_deleted);
     // email is mangled so the same address can be re-registered
-    assert!(deleted.email.as_deref().map(|e| e.contains("-deleted-")).unwrap_or(false));
+    assert!(
+        deleted
+            .email
+            .as_deref()
+            .map(|e| e.contains("-deleted-"))
+            .unwrap_or(false)
+    );
 
     // same email can now be reused
-    let new = repo.create(make_customer(Some("del@test.com"), None)).await.unwrap();
+    let new = repo
+        .create(make_customer(Some("del@test.com"), None))
+        .await
+        .unwrap();
     assert!(!new.is_deleted);
 }
 
@@ -151,20 +193,33 @@ async fn soft_delete_marks_deleted_and_frees_email(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_image_sets_key(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    let customer = repo.create(make_customer(Some("img@test.com"), None)).await.unwrap();
+    let customer = repo
+        .create(make_customer(Some("img@test.com"), None))
+        .await
+        .unwrap();
 
-    repo.update_profile_image(customer.id, Some("profiles/img.jpg".to_string())).await.unwrap();
+    repo.update_profile_image(customer.id, Some("profiles/img.jpg".to_string()))
+        .await
+        .unwrap();
 
     let found = repo.find_by_id(customer.id).await.unwrap().unwrap();
-    assert_eq!(found.profile.unwrap().profile_image.as_deref(), Some("profiles/img.jpg"));
+    assert_eq!(
+        found.profile.unwrap().profile_image.as_deref(),
+        Some("profiles/img.jpg")
+    );
 }
 
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_image_clears_key(pool: PgPool) {
     let repo = PgCustomerRepository::new(pool);
-    let customer = repo.create(make_customer(Some("imgclear@test.com"), None)).await.unwrap();
+    let customer = repo
+        .create(make_customer(Some("imgclear@test.com"), None))
+        .await
+        .unwrap();
 
-    repo.update_profile_image(customer.id, Some("profiles/img.jpg".to_string())).await.unwrap();
+    repo.update_profile_image(customer.id, Some("profiles/img.jpg".to_string()))
+        .await
+        .unwrap();
     repo.update_profile_image(customer.id, None).await.unwrap();
 
     let found = repo.find_by_id(customer.id).await.unwrap().unwrap();

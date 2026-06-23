@@ -169,7 +169,7 @@ impl AppFactoryState {
         #[cfg(feature = "sns")]
         let message = {
             Message {
-                sns: std::sync::Arc::new(crate::AwsSns::new(factory.client)),
+                sns: std::sync::Arc::new(AwsSns::new(factory.client)),
             }
         };
 
