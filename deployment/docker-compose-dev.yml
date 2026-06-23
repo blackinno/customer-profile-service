@@ -1,0 +1,29 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: deployment/docker/postgres/Dockerfile
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=axum_rust_template_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d axum_rust_template_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+networks:
+  postgres:
+    driver: bridge
+
+volumes:
+  pgdata:

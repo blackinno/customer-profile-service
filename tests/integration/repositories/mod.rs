@@ -1,0 +1,4 @@
+mod customer_repository_test;
+mod identity_repository_test;
+mod profile_change_repository_test;
+mod the1_user_repository_test;

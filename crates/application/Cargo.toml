@@ -1,0 +1,16 @@
+[package]
+name = "application"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+validator = { workspace = true }
+utoipa = { workspace = true }
+tracing = { workspace = true }
+rand = { workspace = true }

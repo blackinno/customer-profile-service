@@ -1,0 +1,131 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/domain",
+    "crates/application",
+    "crates/infrastructure",
+    "crates/api",
+]
+
+[workspace.dependencies]
+# Common dependencies
+tokio = { version = "1.48.0", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+uuid = { version = "1.18.1", features = ["v4", "serde"] }
+chrono = { version = "0.4.42", features = ["serde"] }
+anyhow = "1.0.100"
+thiserror = "2.0.12"
+async-trait = "0.1.89"
+
+# HTTP/Web dependencies
+axum = { version = "0.8.6", features = ["multipart"] }
+tower = "0.5.2"
+tower-http = { version = "0.6.6", features = [
+    "cors",
+    "limit",
+    "request-id",
+    "timeout",
+    "trace",
+    "util",
+] }
+
+# Metrics — Prometheus exposition + façade
+metrics = "0.24.2"
+metrics-exporter-prometheus = { version = "0.18.3", default-features = false }
+
+# Database dependencies
+sqlx = { version = "0.8.6", features = [
+    "chrono",
+    "macros",
+    "postgres",
+    "runtime-tokio-rustls",
+    "uuid",
+] }
+
+# Validation
+validator = { version = "0.20.0", features = ["derive"] }
+
+# Logging
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter", "json"] }
+
+# OpenAPI dependencies
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+
+# Background Processing
+qml-rs = { version = "2.0.0", features = ["postgres"] }
+
+# AWS SDK
+aws-config = "1.8.8"
+aws-sdk-sns = "1.87.0"
+aws-sdk-s3 = "1"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+
+# Crypto / signing
+rsa = { version = "0.9", features = ["pem"] }
+sha1 = { version = "0.10", features = ["oid"] }
+base64 = "0.22"
+
+# Auth
+jsonwebtoken = "9"
+
+# Random
+rand = "0.8"
+
+# Testing
+wiremock = "0.6"
+
+[package]
+name = "customer-profile-service"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "customer-profile-service"
+path = "cmd/main.rs"
+
+[features]
+# Production builds always enable `sns`. Local dev loops can shave several
+# minutes off the first build (and ~30s off `cargo check` on a warm cache)
+# by disabling it: `cargo check --no-default-features`.
+default = ["sns"]
+sns = ["infrastructure/sns"]
+
+[dependencies]
+# Local crates
+domain = { path = "crates/domain" }
+application = { path = "crates/application" }
+infrastructure = { path = "crates/infrastructure", default-features = false }
+api = { path = "crates/api" }
+
+# External dependencies
+tokio = { workspace = true }
+axum = { workspace = true }
+anyhow = { workspace = true }
+sqlx = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+tower = { workspace = true }
+uuid = { workspace = true }
+validator = { workspace = true }
+wiremock = { workspace = true }
+
+# Trim debuginfo for faster incremental dev builds. Full debuginfo dominates
+# link time on macOS, and we rarely step into dependency code with a debugger.
+# Backtraces still resolve to file:line via line tables.
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+debug = false

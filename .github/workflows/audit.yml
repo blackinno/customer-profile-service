@@ -1,0 +1,40 @@
+name: Security audit
+
+on:
+  push:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - ".github/workflows/audit.yml"
+  schedule:
+    # Weekly: Monday 08:00 Bangkok (UTC+7) = 01:00 UTC
+    - cron: "0 1 * * 1"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Each advisory below is a deliberate, narrow waiver. Re-evaluate
+          # on every dependency bump and remove the entry the moment a fix
+          # lands upstream.
+          #
+          # RUSTSEC-2023-0071 — rsa Marvin attack timing sidechannel. No
+          #   upstream fix yet (RustCrypto rewrite to constant-time is in
+          #   progress). `rsa` enters our tree only via `sqlx-mysql`, which
+          #   `sqlx-macros` pulls in for compile-time query validation
+          #   across all backends — we use the postgres driver exclusively,
+          #   so this code path is never reached at runtime.
+          #   Tracking: https://github.com/RustCrypto/RSA/issues/19
+          #
+          # RUSTSEC-2026-0098/0099/0104 — three rustls-webpki 0.101.7 bugs
+          #   in X.509 / CRL parsing. Pinned transitively by
+          #   aws-smithy-http-client → hyper-rustls 0.24 → rustls 0.21.
+          #   Practical impact for us is low: we only initiate TLS to AWS
+          #   endpoints (no CRL checking, no untrusted certificate
+          #   processing). Remove once the AWS Rust SDK ships a release
+          #   built on rustls-webpki >= 0.103.13.
+          ignore: RUSTSEC-2023-0071,RUSTSEC-2026-0098,RUSTSEC-2026-0099,RUSTSEC-2026-0104
