@@ -1,4 +1,8 @@
-use crate::{AppFactoryState, configuration::Settings};
+use crate::{
+    AppFactoryState,
+    background_tasks::{EmailTask, SmsTask, SnsPublishTask},
+    configuration::Settings,
+};
 use chrono::Duration;
 use qml_rs::{
     BackgroundJobServer, PostgresConfig, RetryPolicy, RetryStrategy, ServerConfig, Storage,
@@ -49,7 +53,10 @@ pub async fn initialize_qml_factory(
     Ok(qml_server)
 }
 
-pub fn initialize_qml_worker_registry(_app_state: AppFactoryState) -> WorkerRegistry {
-    // Workers are registered here once engineers implement their background tasks.
-    WorkerRegistry::new()
+pub fn initialize_qml_worker_registry(app_state: AppFactoryState) -> WorkerRegistry {
+    let mut registry = WorkerRegistry::new();
+    registry.register_typed(SnsPublishTask::new(app_state.clone()));
+    registry.register_typed(SmsTask::new(app_state.sms.clone()));
+    registry.register_typed(EmailTask::new(app_state));
+    registry
 }

@@ -1,3 +1,4 @@
+pub mod background_tasks;
 pub mod config;
 pub mod customers;
 pub mod events;

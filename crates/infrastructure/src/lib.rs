@@ -9,4 +9,5 @@ pub mod stages;
 pub mod utils;
 
 pub use aws::*;
+pub use background_tasks::{EmailTask, SmsTask, SnsPublishTask};
 pub use stages::factory::*;
