@@ -1,3 +1,4 @@
+use domain::entities::identity::Identity;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -28,4 +29,21 @@ pub struct IdentityResponse {
 pub struct InvokeTokenResponse {
     pub access_token: Option<String>,
     pub refresh_token: Option<String>,
+}
+
+impl From<Identity> for IdentityResponse {
+    fn from(identity: Identity) -> Self {
+        IdentityResponse {
+            id: identity.id.to_string(),
+            user_uuid: identity.user_uuid.to_string(),
+            provider_name: identity.provider_name,
+            external_id: identity.external_id,
+            provider_id_token: identity.provider_id_token,
+            provider_access_token: identity.provider_access_token,
+            provider_refresh_token: identity.provider_refresh_token,
+            is_deleted: identity.is_deleted,
+            created_at: identity.created_at.to_rfc3339(),
+            updated_at: identity.updated_at.to_rfc3339(),
+        }
+    }
 }

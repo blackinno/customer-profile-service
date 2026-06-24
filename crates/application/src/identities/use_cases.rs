@@ -30,29 +30,13 @@ impl IdentityUseCases {
         self
     }
 
-    /// Map a domain `Identity` into the API-facing `IdentityResponse` DTO.
-    fn to_response(identity: domain::entities::identity::Identity) -> IdentityResponse {
-        IdentityResponse {
-            id: identity.id.to_string(),
-            user_uuid: identity.user_uuid.to_string(),
-            provider_name: identity.provider_name,
-            external_id: identity.external_id,
-            provider_id_token: identity.provider_id_token,
-            provider_access_token: identity.provider_access_token,
-            provider_refresh_token: identity.provider_refresh_token,
-            is_deleted: identity.is_deleted,
-            created_at: identity.created_at.to_rfc3339(),
-            updated_at: identity.updated_at.to_rfc3339(),
-        }
-    }
-
     /// Return all active identities for a user (customer-facing route).
     pub async fn get_identities(
         &self,
         user_uuid: Uuid,
     ) -> Result<Vec<IdentityResponse>, ApplicationError> {
         let identities = self.identities.find_by_user(user_uuid).await?;
-        Ok(identities.into_iter().map(Self::to_response).collect())
+        Ok(identities.into_iter().map(IdentityResponse::from).collect())
     }
 
     /// Return all active identities for a user (internal/admin route).
@@ -63,7 +47,7 @@ impl IdentityUseCases {
         user_uuid: Uuid,
     ) -> Result<Vec<IdentityResponse>, ApplicationError> {
         let identities = self.identities.find_by_user(user_uuid).await?;
-        Ok(identities.into_iter().map(Self::to_response).collect())
+        Ok(identities.into_iter().map(IdentityResponse::from).collect())
     }
 
     /// Link a new provider identity to a user.
@@ -121,7 +105,7 @@ impl IdentityUseCases {
             if let Err(e) = self.publisher.publish(&self.sns_topic, &payload).await {
                 tracing::warn!("sns publish failed (identity linked): {e}");
             }
-            return Ok(Self::to_response(restored));
+            return Ok(IdentityResponse::from(restored));
         }
 
         // No recyclable row — create fresh
@@ -135,7 +119,7 @@ impl IdentityUseCases {
         if let Err(e) = self.publisher.publish(&self.sns_topic, &payload).await {
             tracing::warn!("sns publish failed (identity linked): {e}");
         }
-        Ok(Self::to_response(created))
+        Ok(IdentityResponse::from(created))
     }
 
     /// Soft-delete an identity and append an audit transaction record.

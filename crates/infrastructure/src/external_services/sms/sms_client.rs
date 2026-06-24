@@ -1,7 +1,6 @@
 use application::profile_changes::use_cases::SmsService;
 use async_trait::async_trait;
 
-/// HTTP client for the SMS proxy service.
 pub struct SmsClient {
     http: reqwest::Client,
     proxy_url: String,

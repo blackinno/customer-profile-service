@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use application::segments::use_cases::{The1Client, The1PartnerMemberData};
 
-/// Response shape from `GET /customers/me`.
 #[derive(Deserialize)]
 pub struct The1ProfileResponse {
     pub member_id: Option<String>,
@@ -16,8 +15,6 @@ pub struct The1ProfileResponse {
     pub tiers: Option<Vec<The1TierData>>,
 }
 
-/// Tier sub-object returned by The1 endpoints.
-/// `expired_date` arrives as an ISO-8601 string, not a timestamp.
 #[derive(Deserialize)]
 pub struct The1TierData {
     pub code: String,
@@ -25,16 +22,12 @@ pub struct The1TierData {
     pub expired_date: Option<String>,
 }
 
-/// Response shape from `POST /auth/invoke`.
 #[derive(Deserialize)]
 pub struct InvokeTokenResponse {
     pub access_token: Option<String>,
     pub refresh_token: Option<String>,
 }
 
-/// Response shape from `GET /partner-members/{card_number}`.
-/// All fields are `Option` to be resilient against partial responses from
-/// The1, keeping deserialization from panicking on missing keys.
 #[derive(Deserialize)]
 pub struct The1PartnerMemberResponse {
     pub user_uuid: Option<String>,
@@ -45,10 +38,6 @@ pub struct The1PartnerMemberResponse {
     pub tiers: Option<Vec<The1TierData>>,
 }
 
-/// Concrete HTTP client for The1 external service.
-///
-/// Implements `application::segments::use_cases::The1Client` so that
-/// `SegmentUseCases` can call The1 without importing any HTTP primitives.
 pub struct The1HttpClient {
     http: reqwest::Client,
     base_url: String,
@@ -62,7 +51,6 @@ impl The1HttpClient {
         }
     }
 
-    /// Retrieve the authenticated user's profile from The1.
     pub async fn get_profile(&self, access_token: &str) -> Result<The1ProfileResponse, String> {
         self.http
             .get(format!("{}/customers/me", self.base_url))
@@ -76,7 +64,6 @@ impl The1HttpClient {
             .map_err(|e| e.to_string())
     }
 
-    /// Exchange a refresh token for a new access token via The1's invoke endpoint.
     pub async fn invoke_token(&self, refresh_token: &str) -> Result<InvokeTokenResponse, String> {
         self.http
             .post(format!("{}/auth/invoke", self.base_url))
@@ -90,7 +77,6 @@ impl The1HttpClient {
             .map_err(|e| e.to_string())
     }
 
-    /// Fetch raw partner-member data from The1 by card number.
     async fn fetch_partner_member(
         &self,
         card_number: &str,
@@ -106,8 +92,6 @@ impl The1HttpClient {
             .map_err(|e| e.to_string())
     }
 
-    /// Convert a raw The1 tier response to the domain `UpsertTier`.
-    /// `expired_date` is parsed from RFC-3339; invalid/missing values become `None`.
     fn map_tier(tier: The1TierData) -> UpsertTier {
         let expired_date = tier
             .expired_date
@@ -123,8 +107,6 @@ impl The1HttpClient {
     }
 }
 
-/// Implement the application-layer gateway trait so `SegmentUseCases` can call
-/// The1 without depending on reqwest or any HTTP primitives.
 #[async_trait]
 impl The1Client for The1HttpClient {
     async fn get_partner_member(&self, card_number: &str) -> Result<The1PartnerMemberData, String> {
