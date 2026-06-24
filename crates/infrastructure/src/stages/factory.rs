@@ -70,6 +70,8 @@ pub struct AppFactoryState {
     pub storage: Arc<dyn Storage>,
     pub repos: Repositories,
     pub use_cases: UseCases,
+    pub settings: Settings,
+    pub sms: Arc<dyn application::profile_changes::use_cases::SmsService>,
     #[cfg(feature = "sns")]
     pub message: Message,
 }
@@ -85,11 +87,11 @@ impl AppFactoryState {
     /// Wire all repositories, external clients, and use-case structs.
     /// Called once at startup after `InitialAppFactory::new` completes.
     pub async fn build(factory: InitialAppFactory) -> anyhow::Result<Self> {
-        let settings = &factory.settings;
+        let settings = factory.settings.clone();
         let pool = factory.db_pool.clone();
 
         // ---- AppConfig ----
-        let config = Arc::new(AppConfig::from(settings));
+        let config = Arc::new(AppConfig::from(&settings));
 
         // ---- Repositories ----
         let customers: Arc<dyn domain::repositories::customer_repository::CustomerRepository> =
@@ -164,7 +166,7 @@ impl AppFactoryState {
                 profile_changes,
                 customers.clone(),
                 config.clone(),
-                sms,
+                sms.clone(),
                 token_service,
             )
             .with_publisher(publisher.clone()),
@@ -202,6 +204,8 @@ impl AppFactoryState {
             storage: factory.storage,
             repos,
             use_cases,
+            settings,
+            sms,
             #[cfg(feature = "sns")]
             message,
         })
