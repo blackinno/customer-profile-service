@@ -1,16 +1,12 @@
 use std::sync::Arc;
 
 use chrono::NaiveDate;
-use domain::entities::customer::{
-    CreateCustomer, Customer, Gender, Locale, SearchField, UpdateCustomer,
-};
+use domain::entities::customer::{CreateCustomer, Gender, Locale, SearchField, UpdateCustomer};
 use domain::repositories::customer_repository::CustomerRepository;
 use uuid::Uuid;
 
 use crate::config::AppConfig;
-use crate::customers::dtos::{
-    CreateCustomerRequest, CustomerResponse, SearchCustomerQuery, UpdateCustomerRequest,
-};
+use crate::customers::dtos::{CreateCustomerRequest, CustomerResponse, SearchCustomerQuery, UpdateCustomerRequest};
 use crate::errors::ApplicationError;
 use crate::events::{NoopPublisher, ProfileChangedPayload, Publisher};
 
@@ -77,7 +73,7 @@ impl CustomerUseCases {
             })
             .await?;
 
-        Ok(customer_to_response(customer))
+        Ok(customer.into())
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> Result<CustomerResponse, ApplicationError> {
@@ -94,7 +90,7 @@ impl CustomerUseCases {
             )));
         }
 
-        Ok(customer_to_response(customer))
+        Ok(customer.into())
     }
 
     pub async fn search(
@@ -103,7 +99,7 @@ impl CustomerUseCases {
     ) -> Result<Vec<CustomerResponse>, ApplicationError> {
         let field = build_search_field(&query)?;
         let customers = self.customers.search(field).await?;
-        Ok(customers.into_iter().map(customer_to_response).collect())
+        Ok(customers.into_iter().map(CustomerResponse::from).collect())
     }
 
     pub async fn get_me(&self, user_uuid: Uuid) -> Result<CustomerResponse, ApplicationError> {
@@ -118,7 +114,7 @@ impl CustomerUseCases {
             )));
         }
 
-        Ok(customer_to_response(customer))
+        Ok(customer.into())
     }
 
     pub async fn update_me(
@@ -169,12 +165,12 @@ impl CustomerUseCases {
             tracing::warn!("sns publish failed (profile changed): {e}");
         }
 
-        Ok(customer_to_response(customer))
+        Ok(customer.into())
     }
 
     pub async fn delete(&self, id: Uuid) -> Result<CustomerResponse, ApplicationError> {
         let customer = self.customers.soft_delete(id).await?;
-        Ok(customer_to_response(customer))
+        Ok(customer.into())
     }
 
     pub async fn update_profile_image(
@@ -191,7 +187,6 @@ impl CustomerUseCases {
 
 // ---- private helpers ----
 
-/// Strips a leading '0' and prepends the configured country format (e.g. "+66").
 fn normalize_phone(phone: &str, format: &str) -> String {
     if let Some(stripped) = phone.strip_prefix('0') {
         format!("{}{}", format, stripped)
@@ -244,55 +239,3 @@ fn build_search_field(query: &SearchCustomerQuery) -> Result<SearchField, Applic
     ))
 }
 
-fn locale_to_string(locale: &Locale) -> String {
-    match locale {
-        Locale::Th => "th".to_string(),
-        Locale::En => "en".to_string(),
-    }
-}
-
-fn gender_to_string(gender: &Gender) -> String {
-    match gender {
-        Gender::Male => "male".to_string(),
-        Gender::Female => "female".to_string(),
-        Gender::Other => "other".to_string(),
-        Gender::Unspecified => "unspecified".to_string(),
-        Gender::NotToSay => "not_to_say".to_string(),
-    }
-}
-
-/// Converts a domain `Customer` into the application-layer `CustomerResponse` DTO.
-pub(crate) fn customer_to_response(customer: Customer) -> CustomerResponse {
-    let (first_name, last_name, birthdate, gender, profile_image, nationality) =
-        match customer.profile {
-            Some(profile) => (
-                profile.first_name,
-                profile.last_name,
-                profile.birthdate.map(|d| d.to_string()),
-                profile.gender.as_ref().map(gender_to_string),
-                profile.profile_image,
-                profile.nationality,
-            ),
-            None => (None, None, None, None, None, None),
-        };
-
-    CustomerResponse {
-        id: customer.id.to_string(),
-        email: customer.email,
-        phone: customer.phone,
-        email_verified: customer.email_verified,
-        phone_verified: customer.phone_verified,
-        locale: locale_to_string(&customer.locale),
-        has_consent: customer.has_consent,
-        is_deleted: customer.is_deleted,
-        client_id: customer.client_id,
-        created_at: customer.created_at.to_rfc3339(),
-        updated_at: customer.updated_at.to_rfc3339(),
-        first_name,
-        last_name,
-        birthdate,
-        gender,
-        profile_image,
-        nationality,
-    }
-}

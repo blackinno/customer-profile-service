@@ -1,14 +1,17 @@
 #[cfg(feature = "sns")]
-use crate::{AwsSns, Message, configuration::initialize_aws_sns};
 use crate::{
+    aws::{AwsSns, Message, SnsPublisher},
+    configuration::initialize_aws_sns,
+};
+use crate::{
+    aws::{CloudFrontSigner, S3Storage},
     configuration::{Settings, create_connection_pool, create_qml_connection_pool, migration},
-    external::{sms_client::SmsClient, the1_client::The1HttpClient},
+    external_services::{sms::SmsClient, the1::The1HttpClient},
     persistence::{
         pg_customer_repository::PgCustomerRepository, pg_identity_repository::PgIdentityRepository,
         pg_profile_change_repository::PgProfileChangeRepository,
         pg_the1_user_repository::PgThe1UserRepository,
     },
-    storage::{cloudfront_signer::CloudFrontSigner, s3::S3Storage},
     utils::jwt::JwtTokenService,
 };
 use application::{
@@ -141,8 +144,8 @@ impl AppFactoryState {
         // ---- SNS publisher ----
         #[cfg(feature = "sns")]
         let publisher: Arc<dyn application::events::Publisher> = {
-            let sns = Arc::new(crate::AwsSns::new(factory.client.clone()));
-            Arc::new(crate::SnsPublisher::new(sns))
+            let sns = Arc::new(AwsSns::new(factory.client.clone()));
+            Arc::new(SnsPublisher::new(sns))
         };
         #[cfg(not(feature = "sns"))]
         let publisher: Arc<dyn application::events::Publisher> =

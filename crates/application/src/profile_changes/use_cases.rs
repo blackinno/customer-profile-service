@@ -156,7 +156,7 @@ impl ProfileChangeUseCases {
             }
         }
 
-        Ok(profile_change_to_response(record))
+        Ok(record.into())
     }
 
     /// Resend OTP (caller supplies the existing token to prove ownership of the request).
@@ -226,7 +226,7 @@ impl ProfileChangeUseCases {
                 .map_err(ApplicationError::External)?;
         }
 
-        Ok(profile_change_to_response(updated))
+        Ok(updated.into())
     }
 
     /// Verify the OTP supplied by the user and return a short-lived confirmation token.
@@ -278,7 +278,7 @@ impl ProfileChangeUseCases {
             )
             .await?;
 
-        Ok(profile_change_to_response(updated))
+        Ok(updated.into())
     }
 
     /// Finalise the change using the confirmation token issued by `verify_profile_change`.
@@ -362,7 +362,7 @@ impl ProfileChangeUseCases {
             .update_status_and_token(profile_id, ChangeStatus::Completed, None, None)
             .await?;
 
-        Ok(profile_change_to_response(completed))
+        Ok(completed.into())
     }
 }
 
@@ -386,22 +386,6 @@ fn normalize_phone(phone: &str, format: &str) -> String {
     }
 }
 
-fn change_type_to_str(ct: &ChangeType) -> &'static str {
-    match ct {
-        ChangeType::Telephone => "telephone",
-        ChangeType::Email => "email",
-    }
-}
-
-fn change_status_to_str(cs: &ChangeStatus) -> &'static str {
-    match cs {
-        ChangeStatus::PendingVerifyOtp => "pending_verify_otp",
-        ChangeStatus::VerifyChangeCompleted => "verify_change_completed",
-        ChangeStatus::PendingChangeTopConfirmation => "pending_change_top_confirmation",
-        ChangeStatus::Completed => "completed",
-    }
-}
-
 pub(crate) fn generate_otp_code() -> String {
     use rand::Rng;
     format!("{:06}", rand::thread_rng().gen_range(0..=999999u32))
@@ -414,23 +398,3 @@ pub(crate) fn generate_ref_code() -> String {
         .collect()
 }
 
-pub(crate) fn profile_change_to_response(
-    pc: domain::entities::profile_change::ProfileChange,
-) -> ProfileChangeResponse {
-    ProfileChangeResponse {
-        id: pc.id.to_string(),
-        user_uuid: pc.user_uuid.to_string(),
-        change_type: change_type_to_str(&pc.change_type).to_string(),
-        identifier: pc.identifier,
-        old_value: pc.old_value,
-        new_value: pc.new_value,
-        status: change_status_to_str(&pc.status).to_string(),
-        token: pc.token,
-        token_expired_at: pc.token_expired_at.to_rfc3339(),
-        ref_code: pc.ref_code,
-        next_otp_request_at: pc.next_otp_request_at.to_rfc3339(),
-        otp_expired_at: pc.otp_expired_at.to_rfc3339(),
-        created_at: pc.created_at.to_rfc3339(),
-        updated_at: pc.updated_at.to_rfc3339(),
-    }
-}
